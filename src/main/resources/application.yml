@@ -57,7 +57,7 @@ mybatis-plus:
 # 应用配置
 app:
   # 版本号（页脚展示）
-  version: 2.0.5
+  version: 2.0.6
   # 静态资源版本号（css/js 缓存刷新，随静态资源改动递增）
   asset-version: 2.0.10
   # 仓库地址（导航 GitHub 图标、打赏弹窗、系统信息页与版本比对）
@@ -135,7 +135,7 @@ management:
 info:
   app:
     name: JArgus
-    version: 2.0.5
+    version: 2.0.6
     description: 百目 · Java 代码评审平台
 
 # 日志

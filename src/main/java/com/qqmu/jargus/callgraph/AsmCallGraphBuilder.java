@@ -2,9 +2,12 @@ package com.qqmu.jargus.callgraph;
 
 import lombok.extern.slf4j.Slf4j;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -14,7 +17,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -81,6 +86,12 @@ public class AsmCallGraphBuilder {
                 boolean isAbstract = (method.access & Opcodes.ACC_ABSTRACT) != 0;
                 boolean isNative = (method.access & Opcodes.ACC_NATIVE) != 0;
                 boolean isConstructor = "<init>".equals(method.name) || "<clinit>".equals(method.name);
+                // 编译器生成方法（lambda 体 lambda$x$0 / 内部类访问器 access$000 / 桥方法）：
+                // 仍要入图分析其内部调用（lambda 体里调用的真实方法靠它记录调用边），
+                // 但自身永远不作为死代码报告——它们经 invokedynamic/编译器机制调用，无源码调用点
+                boolean isSynthetic = (method.access & (Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) != 0
+                        || method.name.contains("$")
+                        || method.name.startsWith("lambda$");
 
                 // 从字节码指令流中的 LineNumberNode 取方法真实起止行（抽象/本地方法无行号，保持 0）
                 int lineStart = 0;
@@ -106,6 +117,8 @@ public class AsmCallGraphBuilder {
                         .isConstructor(isConstructor)
                         .isAbstract(isAbstract)
                         .isNative(isNative)
+                        .isSynthetic(isSynthetic)
+                        .annotations(annotationNames(method))
                         .build();
 
                 callGraph.addMethod(methodInfo);
@@ -136,6 +149,31 @@ public class AsmCallGraphBuilder {
     }
 
     /**
+     * 收集方法注解的简单名：字节码注解描述符形如
+     * {@code Lorg/springframework/scheduling/annotation/Scheduled;}，
+     * 取最后一个 '/' 之后、';' 之前的部分
+     */
+    private Set<String> annotationNames(MethodNode method) {
+        Set<String> names = new HashSet<>();
+        collectAnnotationNames(method.visibleAnnotations, names);
+        collectAnnotationNames(method.invisibleAnnotations, names);
+        return names;
+    }
+
+    private void collectAnnotationNames(List<AnnotationNode> annotations, Set<String> names) {
+        if (annotations == null) return;
+        for (AnnotationNode annotation : annotations) {
+            String desc = annotation.desc;
+            if (desc == null || desc.length() < 3) continue;
+            int slash = desc.lastIndexOf('/');
+            int semi = desc.lastIndexOf(';');
+            if (semi > slash + 1) {
+                names.add(desc.substring(slash + 1, semi));
+            }
+        }
+    }
+
+    /**
      * 分析方法内的调用指令
      */
     private void analyzeMethodCalls(MethodInfo caller, MethodNode methodNode) {
@@ -163,6 +201,23 @@ public class AsmCallGraphBuilder {
                         .build();
 
                 callGraph.addCall(edge);
+            } else if (insn instanceof InvokeDynamicInsnNode indyInsn) {
+                // invokedynamic 的 bootstrap 参数里的方法句柄才是 lambda / 方法引用的真实目标：
+                // Foo::bar 这类方法引用在字节码中没有任何普通调用指令，只以 Handle 形式
+                // 挂在这里；漏收会让被引用的方法被误报死代码
+                for (Object bsmArg : indyInsn.bsmArgs) {
+                    if (bsmArg instanceof Handle handle) {
+                        CallEdge edge = CallEdge.builder()
+                                .caller(caller)
+                                .calleeClassName(handle.getOwner().replace('/', '.'))
+                                .calleeMethodName(handle.getName())
+                                .calleeDescriptor(handle.getDesc())
+                                .callType(CallEdge.CallType.VIRTUAL)
+                                .lineNumber(0)
+                                .build();
+                        callGraph.addCall(edge);
+                    }
+                }
             }
         });
     }

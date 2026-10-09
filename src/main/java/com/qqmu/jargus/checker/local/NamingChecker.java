@@ -10,6 +10,8 @@ import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -96,13 +98,29 @@ public class NamingChecker extends AbstractLocalChecker {
         cu.findAll(FieldDeclaration.class).forEach(field -> {
             boolean isStatic = field.isStatic();
             boolean isFinal = field.isFinal();
-            boolean isConstant = isStatic && isFinal;
+            // 接口字段隐式 public static final（无需显式修饰符），同样按常量规则检查，
+            // 否则 MAX_SIZE 这类接口常量会掉进小驼峰分支被误报
+            boolean insideInterface = field.findAncestor(ClassOrInterfaceDeclaration.class)
+                    .map(ClassOrInterfaceDeclaration::isInterface)
+                    .orElse(false);
+            boolean isConstant = (isStatic && isFinal) || insideInterface;
 
             field.getVariables().forEach(var -> {
                 String varName = var.getNameAsString();
                 int line = var.getBegin().map(p -> p.line).orElse(1);
 
                 if (isConstant) {
+                    // serialVersionUID 是 JLS 规定的固定名，天然豁免全大写常量规则
+                    if ("serialVersionUID".equals(varName)) {
+                        return;
+                    }
+                    // Logger 声明是约定例外：业界通用 private static final Logger log = ...，
+                    // 驼峰名不视为常量命名违规
+                    String rawType = rawTypeName(var.getType());
+                    if ("Logger".equals(rawType) || "Log".equals(rawType)
+                            || varName.equalsIgnoreCase("log") || varName.equalsIgnoreCase("logger")) {
+                        return;
+                    }
                     // 常量：全大写下划线
                     if (!CONSTANT_NAME_PATTERN.matcher(varName).matches()) {
                         issues.add(createIssue(
@@ -157,5 +175,16 @@ public class NamingChecker extends AbstractLocalChecker {
                 ));
             }
         });
+    }
+
+    /**
+     * 取类型的原始名（剥掉泛型实参与限定前缀）：
+     * org.slf4j.Logger / Map&lt;String, X&gt; → Logger / Map
+     */
+    private String rawTypeName(Type type) {
+        if (type instanceof ClassOrInterfaceType cit) {
+            return cit.getNameAsString();
+        }
+        return type.asString();
     }
 }

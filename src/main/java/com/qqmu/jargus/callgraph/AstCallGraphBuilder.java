@@ -76,6 +76,7 @@ public class AstCallGraphBuilder {
                         .isAbstract(isAbstract)
                         .isNative(isNative)
                         .isOverride(isOverride(method))
+                        .annotations(annotationNames(method))
                         .build();
 
                 callGraph.addMethod(methodInfo);
@@ -267,5 +268,18 @@ public class AstCallGraphBuilder {
         return method.getAnnotations().stream()
                 .anyMatch(a -> "Override".equals(a.getNameAsString())
                         || "java.lang.Override".equals(a.getNameAsString()));
+    }
+
+    /**
+     * 收集方法注解的简单名（兼容全限定写法 @org.springframework...Scheduled）
+     */
+    private java.util.Set<String> annotationNames(MethodDeclaration method) {
+        return method.getAnnotations().stream()
+                .map(a -> {
+                    String name = a.getNameAsString();
+                    int dot = name.lastIndexOf('.');
+                    return dot >= 0 ? name.substring(dot + 1) : name;
+                })
+                .collect(java.util.stream.Collectors.toSet());
     }
 }

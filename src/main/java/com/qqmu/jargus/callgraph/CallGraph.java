@@ -17,6 +17,27 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class CallGraph {
 
+    /**
+     * 框架通过反射/代理调用的方法注解（简单名）：带这些注解的方法即使源码里
+     * 找不到调用点也不是死代码——调度器、事件总线、容器生命周期、序列化框架、
+     * AOP 通知、测试运行器都会在运行时调用它们。用于死代码误报豁免。
+     */
+    private static final Set<String> FRAMEWORK_INVOKED_ANNOTATIONS = Set.of(
+            // 容器生命周期 / 调度 / 事件
+            "PostConstruct", "PreDestroy", "Scheduled", "EventListener",
+            "TransactionalEventListener", "KafkaListener", "RabbitListener", "JmsListener",
+            "Subscribe", "Bean",
+            // Spring MVC / 绑定
+            "ExceptionHandler", "InitBinder", "ModelAttribute",
+            // AspectJ 通知
+            "Around", "Before", "After", "AfterReturning", "AfterThrowing",
+            // 测试运行器
+            "Test", "BeforeEach", "AfterEach", "BeforeAll", "AfterAll",
+            "ParameterizedTest", "RepeatedTest", "TestFactory",
+            // Jackson 序列化回调
+            "JsonCreator", "JsonProperty", "JsonGetter", "JsonSetter",
+            "JsonAnyGetter", "JsonAnySetter", "JsonValue");
+
     /** 所有已定义的方法（按签名索引） */
     private final Map<String, MethodInfo> definedMethods = new ConcurrentHashMap<>();
 
@@ -89,6 +110,18 @@ public class CallGraph {
 
             // 排除构造方法（一般都会被调用，除非类完全未被使用）
             if (method.isConstructor()) {
+                continue;
+            }
+
+            // 排除编译器生成方法（lambda 体 lambda$x$0 / 合成访问器 access$000 / 桥方法）：
+            // 它们经 invokedynamic 或编译器内部机制调用，源码里永远找不到调用点
+            if (method.isSynthetic()) {
+                continue;
+            }
+
+            // 排除框架反射调用的注解方法（@Scheduled/@PostConstruct/@Test 等），防误报死代码
+            if (method.getAnnotations() != null && method.getAnnotations().stream()
+                    .anyMatch(FRAMEWORK_INVOKED_ANNOTATIONS::contains)) {
                 continue;
             }
 

@@ -5,8 +5,10 @@ import com.qqmu.jargus.checker.CheckIssue;
 import com.qqmu.jargus.checker.CheckerType;
 import com.qqmu.jargus.checker.IssueLevel;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.AnnotationDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
@@ -64,6 +66,12 @@ public class MagicNumberChecker extends AbstractLocalChecker {
     @Override
     protected void doCheck(CheckContext context, CompilationUnit cu, List<CheckIssue> issues) {
         cu.findAll(LiteralExpr.class).forEach(literal -> {
+            // 注解及注解类型声明中的数字不报告（@Size(max=100)/@Retryable(maxAttempts=3)/
+            // @interface 成员 default 值）：这些是框架配置语义，不是业务逻辑里的魔法数字
+            if (literal.findAncestor(AnnotationExpr.class).isPresent()
+                    || literal.findAncestor(AnnotationDeclaration.class).isPresent()) {
+                return;
+            }
             if (literal instanceof IntegerLiteralExpr) {
                 checkIntegerLiteral(context, (IntegerLiteralExpr) literal, issues);
             } else if (literal instanceof LongLiteralExpr) {

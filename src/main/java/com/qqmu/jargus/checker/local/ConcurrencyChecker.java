@@ -47,6 +47,24 @@ public class ConcurrencyChecker extends AbstractLocalChecker {
             "Character", "BigDecimal", "BigInteger", "LocalDate", "LocalDateTime",
             "LocalTime", "Instant", "Duration", "Period");
 
+    /**
+     * 并发安全类型：本身就是为跨线程共享设计的（并发容器 / 阻塞队列 / 原子累加器 /
+     * 锁与同步器 / 执行器框架），单例 Bean 里非 final 声明也不构成竞态，误报豁免。
+     * 原子类（AtomicInteger/AtomicReference 等）另按 "Atomic" 前缀匹配。
+     */
+    private static final Set<String> CONCURRENT_SAFE_TYPES = Set.of(
+            "ConcurrentHashMap", "ConcurrentMap", "ConcurrentSkipListMap", "ConcurrentSkipListSet",
+            "CopyOnWriteArrayList", "CopyOnWriteArraySet",
+            "ConcurrentLinkedQueue", "ConcurrentLinkedDeque",
+            "BlockingQueue", "BlockingDeque", "LinkedBlockingQueue", "LinkedBlockingDeque",
+            "ArrayBlockingQueue", "PriorityBlockingQueue", "SynchronousQueue",
+            "DelayQueue", "LinkedTransferQueue",
+            "LongAdder", "LongAccumulator", "DoubleAdder", "DoubleAccumulator",
+            "ReentrantLock", "ReentrantReadWriteLock", "ReadWriteLock", "StampedLock",
+            "Semaphore", "CountDownLatch", "CyclicBarrier", "Phaser", "Exchanger",
+            "ExecutorService", "ScheduledExecutorService", "ThreadPoolExecutor",
+            "ScheduledThreadPoolExecutor", "ForkJoinPool");
+
     @Override
     public CheckerType getCheckerType() {
         return CheckerType.CONCURRENCY;
@@ -92,7 +110,15 @@ public class ConcurrencyChecker extends AbstractLocalChecker {
                     if (varName.equalsIgnoreCase("log") || varName.equalsIgnoreCase("logger")) {
                         continue;
                     }
-                    if (typeName.startsWith("ThreadLocal") || IMMUTABLE_TYPES.contains(typeName)) {
+                    // 剥掉泛型实参取原始类型（ConcurrentHashMap<String, X> → ConcurrentHashMap）
+                    String rawType = typeName;
+                    int lt = rawType.indexOf('<');
+                    if (lt >= 0) {
+                        rawType = rawType.substring(0, lt).trim();
+                    }
+                    if (rawType.startsWith("ThreadLocal") || rawType.startsWith("Atomic")
+                            || IMMUTABLE_TYPES.contains(rawType)
+                            || CONCURRENT_SAFE_TYPES.contains(rawType)) {
                         continue;
                     }
                     int line = field.getBegin().map(p -> p.line).orElse(1);
