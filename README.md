@@ -2,12 +2,19 @@
 
 [中文](README.md) | [English](README_EN.md) | [官网 jargus.qqmu.com](https://jargus.qqmu.com/)
 
+[![Gitee Stars](https://gitee.com/super_rgh/jargus/badge/star.svg?theme=dark)](https://gitee.com/super_rgh/jargus)
+[![GitHub Stars](https://img.shields.io/github/stars/vfaner/jargus?style=flat)](https://github.com/vfaner/jargus)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/vfaner/jargus?label=release)](https://github.com/vfaner/jargus/releases)
+
 > 开箱即用的 Java 代码质量评审平台：本地静态分析引擎 + 可选 AI 深度评审 + SonarQube 式五级评分与质量门禁 + CI/CD 全链路联动 + 扫描报告邮件推送。
 > 单个 JAR / 单个 Docker 镜像交付，内嵌数据库零外部依赖，完全离线可用，界面、规则、报告原生中文。
 
 ![百目 JArgus · 一个 JAR 跑通 Java 代码评审全闭环](images/zhutu.png)
 
 > 🎬 **部署视频**：[B 站约 21 分钟完整部署演示](https://www.bilibili.com/video/BV1aMav6iEgd/)——从下载启动到跑通第一个评审，跟着点一遍即可上手。
+
+> ⭐ 如果 JArgus 对你有帮助，欢迎在 [Gitee](https://gitee.com/super_rgh/jargus) 或 [GitHub](https://github.com/vfaner/jargus) 点一个 Star，这是对项目持续维护最大的支持。
 
 ## 📖 开发背景
 
@@ -176,9 +183,9 @@ docker compose logs -f     # 跟踪日志
 
 ```bash
 # 构建镜像（多阶段：Maven 打包 → JRE 运行时）
-./scripts/docker-build.sh 2.0.3
+./scripts/docker-build.sh 2.0.6
 # 国内网络环境可用镜像站加速构建：
-./scripts/docker-build-cn.sh 2.0.3
+./scripts/docker-build-cn.sh 2.0.6
 
 # 运行（数据卷持久化）
 docker run -d --name jargus \
@@ -189,7 +196,7 @@ docker run -d --name jargus \
   -v jargus-lib:/app/lib \
   -e APP_CRYPTO_KEY="your-16-char-key" \
   --restart unless-stopped \
-  jargus:2.0.3
+  jargus:2.0.6
 ```
 
 健康检查：`curl http://localhost:8080/actuator/health` → `{"status":"UP"}`

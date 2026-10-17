@@ -2,12 +2,19 @@
 
 [中文](README.md) | [English](README_EN.md) | [Website jargus.qqmu.com](https://jargus.qqmu.com/)
 
+[![Gitee Stars](https://gitee.com/super_rgh/jargus/badge/star.svg?theme=dark)](https://gitee.com/super_rgh/jargus)
+[![GitHub Stars](https://img.shields.io/github/stars/vfaner/jargus?style=flat)](https://github.com/vfaner/jargus)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/vfaner/jargus?label=release)](https://github.com/vfaner/jargus/releases)
+
 > An out-of-the-box Java code quality review platform: local static analysis engine + optional AI deep review + SonarQube-style five-grade scoring & quality gates + end-to-end CI/CD wiring + email report delivery.
 > Shipped as a single JAR / single Docker image with an embedded database — zero external dependencies, fully offline capable, with native Chinese UI, rules and reports.
 
 ![JArgus · Full-loop Java code review in a single JAR](images/zhutu.png)
 
 > 🎬 **Deployment walkthrough**: [~21-minute full deployment demo on Bilibili](https://www.bilibili.com/video/BV1aMav6iEgd/) (Chinese narration) — from download & startup to the first finished review.
+
+> ⭐ If JArgus helps you, please consider giving it a Star on [Gitee](https://gitee.com/super_rgh/jargus) or [GitHub](https://github.com/vfaner/jargus) — it is the biggest support for continued maintenance.
 
 ## 📖 Background
 
@@ -176,9 +183,9 @@ docker compose logs -f     # logs
 
 ```bash
 # Build the image (multi-stage: Maven build → JRE runtime)
-./scripts/docker-build.sh 2.0.3
+./scripts/docker-build.sh 2.0.6
 # In mainland-China networks, build via registry mirrors:
-./scripts/docker-build-cn.sh 2.0.3
+./scripts/docker-build-cn.sh 2.0.6
 
 # Run with persistent volumes
 docker run -d --name jargus \
@@ -189,7 +196,7 @@ docker run -d --name jargus \
   -v jargus-lib:/app/lib \
   -e APP_CRYPTO_KEY="your-16-char-key" \
   --restart unless-stopped \
-  jargus:2.0.3
+  jargus:2.0.6
 ```
 
 Health check: `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`
