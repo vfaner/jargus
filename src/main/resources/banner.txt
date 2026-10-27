@@ -1,0 +1,17 @@
+${AnsiColor.BRIGHT_CYAN}
+         ██╗ █████╗ ██████╗  ██████╗ ██╗   ██╗███████╗
+         ██║██╔══██╗██╔══██╗██╔════╝ ██║   ██║██╔════╝
+         ██║███████║██████╔╝██║  ███╗██║   ██║███████╗
+    ██   ██║██╔══██║██╔══██╗██║   ██║██║   ██║╚════██║
+    ╚█████╔╝██║  ██║██║  ██║╚██████╔╝╚██████╔╝███████║
+     ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚══════╝
+${AnsiColor.BRIGHT_BLUE}
+ :: 百目 JArgus :: Java 代码评审平台 ::
+${AnsiColor.BRIGHT_GREEN}
+ 百目所视，无所遁形。开箱即用的 Java 代码质量评审平台。
+${AnsiColor.BRIGHT_BLACK}
+ Version    : v${app.version}
+ Author     : 沐沐开源工坊
+ License    : MIT License
+ Website    : https://jargus.qqmu.com
+${AnsiColor.DEFAULT}

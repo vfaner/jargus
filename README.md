@@ -35,7 +35,7 @@ JArgus 据此以**一个 JAR / 一个容器**交付「扫描 → 评分 → 门�
 - **问题治理**：同文件同规则问题自动聚合；行级 / 规则级忽略并留痕；检查器启停与规则阈值页面可配。
 - **报告与邮件推送**：HTML / PDF 中文报告一键导出（内嵌中文字体）；多 SMTP 发件配置（SSL / STARTTLS、测试发信、授权码 AES 加密）与收件人管理；扫描或 CI 触发器勾选「邮件通知」后，扫描完成自动推送 **HTML 摘要正文 + PDF 报告附件**，失败也发通知，送达状态在扫描历史可见。
 - **CI/CD 集成**：Webhook 触发扫描（按平台约定校验 HMAC 签名），完成后自动回写 commit status 与 MR/PR 评论，流水线按门禁结论阻断合并；详见下文指南。
-- **认证与安全**：JWT 本地账号 + 可选 OAuth2 单点登录，管理员 / 只读双角色；数据库密码、API Key、仓库令牌、SMTP 授权码全部 AES 加密落库；SQL 全参数化，ZIP 解压含 Zip Slip 防护。
+- **认证与安全**：JWT 本地账号 + 企业统一认证（票据回调 / 受信网关头，可只保留统一认证入口），管理员 / 只读双角色；数据库密码、API Key、仓库令牌、SMTP 授权码、SSO 共享密钥全部 AES 加密落库；SQL 全参数化，ZIP 解压含 Zip Slip 防护。
 - **界面与国际化**：Thymeleaf 服务端渲染，无 Vue / npm 构建链，零 CDN；中英双语、深色 / 浅色主题、响应式布局。
 - **多数据库**：内嵌 H2 默认零安装，另支持 MySQL / PostgreSQL / Oracle / SQL Server / 达梦 / 金仓 / openGauss / OceanBase 等 18 类数据库，驱动随包内置，页面可视化切换与自动建表迁移。
 
@@ -47,7 +47,7 @@ JArgus 据此以**一个 JAR / 一个容器**交付「扫描 → 评分 → 门�
 | 静态分析 | JavaParser 3.25（AST + 符号求解）· ASM 9.6 · 自研 CPD 式重复代码指纹 |
 | AI 接入 | OpenAI 兼容 / Anthropic 双协议适配层 |
 | 报告与邮件 | OpenPDF（矢量中文 PDF）· Thymeleaf HTML 报告 · Spring Mail |
-| 安全 | JWT · BCrypt · AES 配置加密 · OAuth2 远端认证 |
+| 安全 | JWT · BCrypt · AES 配置加密 · 企业统一认证（票据 / 网关头） |
 | 前端 | Thymeleaf SSR · 原生 JavaScript · 零 CDN |
 | 部署 | 单 JAR · Docker 多阶段（内置中文字体、非 root、HEALTHCHECK） |
 
@@ -88,7 +88,7 @@ JArgus 据此以**一个 JAR / 一个容器**交付「扫描 → 评分 → 门�
   </tr>
   <tr>
     <td width="33%" align="center"><img src="images/jargus_db.png" width="100%"><br><sub>数据库配置</sub></td>
-    <td width="33%" align="center"><img src="images/jargus_oa.png" width="100%"><br><sub>远端认证</sub></td>
+    <td width="33%" align="center"><img src="images/jargus_renzheng.png" width="100%"><br><sub>企业统一认证</sub></td>
     <td width="33%" align="center"><img src="images/jargus_oa_add.png" width="100%"><br><sub>新增远端认证</sub></td>
   </tr>
   <tr>

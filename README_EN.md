@@ -35,7 +35,7 @@ JArgus therefore ships **one JAR / one container** delivering the full loop "sca
 - **Issue governance**: same-file same-rule issues auto-merged; line-level / rule-level ignores with recorded reasons; checker toggles and rule thresholds configurable in the UI.
 - **Reports & email delivery**: one-click HTML / PDF Chinese report export (CJK fonts embedded); multiple SMTP sender configs (SSL / STARTTLS, test mail, AES-encrypted credentials) plus recipient management; tick "Email notification" on a scan or CI trigger and the finished report (**HTML summary body + PDF attachment**) is mailed automatically — failures are notified too, and delivery status shows up in scan history.
 - **CI/CD integration**: webhook-triggered scans (HMAC signatures verified per platform convention); commit status and MR/PR comment write-back on completion so pipelines block merges on the gate verdict; see the guide below.
-- **Auth & security**: JWT local accounts + optional OAuth2 SSO, admin / read-only roles; database passwords, API keys, repo tokens and SMTP credentials all AES-encrypted at rest; fully parameterized SQL, Zip Slip protection on archive extraction.
+- **Auth & security**: JWT local accounts + enterprise SSO (ticket callback / trusted gateway headers, optionally SSO-only), admin / read-only roles; database passwords, API keys, repo tokens, SMTP credentials and the SSO shared secret all AES-encrypted at rest; fully parameterized SQL, Zip Slip protection on archive extraction.
 - **UI & i18n**: Thymeleaf server-side rendering, no Vue / npm build chain, zero CDN; Chinese / English, dark / light themes, responsive layout.
 - **Multi-database**: embedded H2 by default with zero installation; also supports 18 database types — MySQL / PostgreSQL / Oracle / SQL Server / DM / Kingbase / openGauss / OceanBase, etc. — with drivers bundled, visual switching in the UI and automatic schema creation & migration.
 
@@ -47,7 +47,7 @@ JArgus therefore ships **one JAR / one container** delivering the full loop "sca
 | Static analysis | JavaParser 3.25 (AST + symbol solving) · ASM 9.6 · custom CPD-style duplicate-code fingerprinting |
 | AI integration | OpenAI-compatible / Anthropic dual-protocol adapter |
 | Reports & email | OpenPDF (vector CJK PDF) · Thymeleaf HTML reports · Spring Mail |
-| Security | JWT · BCrypt · AES config encryption · OAuth2 remote auth |
+| Security | JWT · BCrypt · AES config encryption · enterprise SSO (ticket / gateway headers) |
 | Frontend | Thymeleaf SSR · vanilla JavaScript · zero CDN |
 | Deployment | Single JAR · multi-stage Docker (CJK fonts baked in, non-root, HEALTHCHECK) |
 
@@ -88,7 +88,7 @@ All screenshots are taken from real running pages; image assets live in the [`im
   </tr>
   <tr>
     <td width="33%" align="center"><img src="images/jargus_db.png" width="100%"><br><sub>Database settings</sub></td>
-    <td width="33%" align="center"><img src="images/jargus_oa.png" width="100%"><br><sub>Remote auth</sub></td>
+    <td width="33%" align="center"><img src="images/jargus_renzheng.png" width="100%"><br><sub>Enterprise SSO</sub></td>
     <td width="33%" align="center"><img src="images/jargus_oa_add.png" width="100%"><br><sub>New remote auth</sub></td>
   </tr>
   <tr>
