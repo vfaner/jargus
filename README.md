@@ -4,6 +4,7 @@
 
 [![Gitee Stars](https://gitee.com/super_rgh/jargus/badge/star.svg?theme=dark)](https://gitee.com/super_rgh/jargus)
 [![GitHub Stars](https://img.shields.io/github/stars/vfaner/jargus?style=flat)](https://github.com/vfaner/jargus)
+[![AtomGit Mirror](https://img.shields.io/badge/AtomGit-mirror-1f6feb)](https://gitcode.com/vfaner/jargus)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/vfaner/jargus?label=release)](https://github.com/vfaner/jargus/releases)
 
@@ -14,7 +15,7 @@
 
 > 🎬 **部署视频**：[B 站约 21 分钟完整部署演示](https://www.bilibili.com/video/BV1aMav6iEgd/)——从下载启动到跑通第一个评审，跟着点一遍即可上手。
 
-> ⭐ 如果 JArgus 对你有帮助，欢迎在 [Gitee](https://gitee.com/super_rgh/jargus) 或 [GitHub](https://github.com/vfaner/jargus) 点一个 Star，这是对项目持续维护最大的支持。
+> ⭐ 如果 JArgus 对你有帮助，欢迎在 [Gitee](https://gitee.com/super_rgh/jargus)、[GitHub](https://github.com/vfaner/jargus) 或 [AtomGit](https://gitcode.com/vfaner/jargus) 点一个 Star，这是对项目持续维护最大的支持。
 
 ## 📖 开发背景
 
@@ -150,7 +151,7 @@ java -jar jargus.jar
 ### 方式二：源码构建
 
 ```bash
-git clone https://gitee.com/super_rgh/jargus.git   # 或 github.com/vfaner/jargus
+git clone https://gitee.com/super_rgh/jargus.git   # 或 github.com/vfaner/jargus、gitcode.com/vfaner/jargus（AtomGit 镜像）
 cd jargus
 mvn package -DskipTests
 

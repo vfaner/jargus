@@ -4,6 +4,7 @@
 
 [![Gitee Stars](https://gitee.com/super_rgh/jargus/badge/star.svg?theme=dark)](https://gitee.com/super_rgh/jargus)
 [![GitHub Stars](https://img.shields.io/github/stars/vfaner/jargus?style=flat)](https://github.com/vfaner/jargus)
+[![AtomGit Mirror](https://img.shields.io/badge/AtomGit-mirror-1f6feb)](https://gitcode.com/vfaner/jargus)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/vfaner/jargus?label=release)](https://github.com/vfaner/jargus/releases)
 
@@ -14,7 +15,7 @@
 
 > 🎬 **Deployment walkthrough**: [~21-minute full deployment demo on Bilibili](https://www.bilibili.com/video/BV1aMav6iEgd/) (Chinese narration) — from download & startup to the first finished review.
 
-> ⭐ If JArgus helps you, please consider giving it a Star on [Gitee](https://gitee.com/super_rgh/jargus) or [GitHub](https://github.com/vfaner/jargus) — it is the biggest support for continued maintenance.
+> ⭐ If JArgus helps you, please consider giving it a Star on [Gitee](https://gitee.com/super_rgh/jargus), [GitHub](https://github.com/vfaner/jargus) or [AtomGit](https://gitcode.com/vfaner/jargus) — it is the biggest support for continued maintenance.
 
 ## 📖 Background
 
@@ -150,7 +151,7 @@ java -jar jargus.jar
 ### Option 2: Build from Source
 
 ```bash
-git clone https://gitee.com/super_rgh/jargus.git   # or github.com/vfaner/jargus
+git clone https://gitee.com/super_rgh/jargus.git   # or github.com/vfaner/jargus, gitcode.com/vfaner/jargus (AtomGit mirror)
 cd jargus
 mvn package -DskipTests
 
