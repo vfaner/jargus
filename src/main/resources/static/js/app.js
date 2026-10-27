@@ -539,7 +539,8 @@
     if (cached && badge.dataset.refresh !== 'true') return;
 
     api.get(badge.dataset.url).then(function (payload) {
-      if (!payload) return;
+      // checked=false 表示这次没查成（离线/限流）：不要用未知结果覆盖已知的更新状态
+      if (!payload || payload.checked === false) return;
       writeNavUpdateCache(payload);
       showNavUpdateBadge(badge, payload);
     }).catch(function () { /* 离线/限流：保留缓存状态，不打扰用户 */ });
@@ -551,17 +552,18 @@
     btn.addEventListener('click', function () {
       if (btn.disabled) return;
       btn.disabled = true;
+      function failed() {
+        btn.disabled = false;
+        toast(btn.dataset.error || '!', 'danger');
+      }
       api.post(btn.dataset.url).then(function (res) {
         if (res && res.dismissed) {
           try { sessionStorage.removeItem(NAV_UPDATE_CACHE_KEY); } catch (e) { /* ignore */ }
           location.reload();
           return;
         }
-        btn.disabled = false;
-      }).catch(function () {
-        btn.disabled = false;
-        toast(t('settings.unknown'), 'error');
-      });
+        failed();
+      }).catch(failed);
     });
   }
 

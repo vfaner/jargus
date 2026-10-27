@@ -169,6 +169,7 @@
                       th:text="${versionInfo.latestArtifactDate}">2026-09-21</span>
                 <button id="artifact-dismiss-btn" type="button" class="btn btn-ghost btn-sm"
                         th:data-url="@{/api/version/artifact/dismiss}"
+                        th:data-error="#{settings.artifactDismissFailed}"
                         th:title="#{settings.artifactDismissHelp}"
                         th:text="#{settings.artifactDismiss}">Ignore this notice</button>
             </th:block>
@@ -270,7 +271,7 @@
         progressBar.hidden = true;
         btn.disabled = false;
         btn.querySelector('span').textContent = UI.t('settings.updateNow');
-        UI.toast(s.error || UI.t('settings.updateFailed'), 'error');
+        UI.toast(s.error || UI.t('settings.updateFailed'), 'danger');
       }
     }).catch(function () { /* 单次轮询失败忽略，下一秒再试 */ });
   }
@@ -306,7 +307,7 @@
         }).catch(function (err) {
           btn.disabled = false;
           btn.querySelector('span').textContent = UI.t('settings.updateNow');
-          UI.toast(err.message || UI.t('settings.updateFailed'), 'error');
+          UI.toast(err.message || UI.t('settings.updateFailed'), 'danger');
         });
       });
   });

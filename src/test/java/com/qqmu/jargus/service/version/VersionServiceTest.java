@@ -122,6 +122,31 @@ class VersionServiceTest {
     }
 
     @Test
+    void dismissPersistenceFailureKeepsNoticeAndReturnsFalse() {
+        FakeDismissal dismissal = new FakeDismissal();
+        dismissal.dismissFailure = new IllegalStateException("db down");
+        VersionService service = service(feed(release("v2.0.7", ReleaseFeed.Source.GITHUB)),
+                feed(null), constantComparison(ArtifactComparison.Result.DIFFERENT, "sha256:new"),
+                dismissal, "2.0.7");
+        assertEquals(VersionInfo.State.ARTIFACT_UPDATED, service.snapshot().getState());
+
+        assertFalse(service.dismissArtifact(), "持久化失败不能返回成功");
+
+        assertEquals(VersionInfo.State.ARTIFACT_UPDATED, service.snapshot().getState(),
+                "提示必须保留，否则用户以为已经忽略");
+    }
+
+    @Test
+    void vPrefixedCurrentVersionIsNormalized() {
+        VersionService service = service(feed(release("v2.0.7", ReleaseFeed.Source.GITHUB)),
+                feed(null), constantComparison(ArtifactComparison.Result.SAME, "sha256:same"),
+                new FakeDismissal(), "v2.0.7");
+
+        assertEquals("2.0.7", service.snapshot().getCurrentVersion());
+        assertEquals(VersionInfo.State.UP_TO_DATE, service.snapshot().getState());
+    }
+
+    @Test
     void checkNowFallsBackToGiteeAndReportsArtifactUpdate() {
         FakeFeed github = feed(null);
         github.latestFailure = new IllegalStateException("github down");
@@ -323,6 +348,7 @@ class VersionServiceTest {
 
     private static final class FakeDismissal implements ArtifactDismissal {
         String key;
+        RuntimeException dismissFailure;
 
         @Override
         public String dismissedKey() {
@@ -331,6 +357,9 @@ class VersionServiceTest {
 
         @Override
         public void dismiss(String artifactKey) {
+            if (dismissFailure != null) {
+                throw dismissFailure;
+            }
             key = artifactKey;
         }
     }

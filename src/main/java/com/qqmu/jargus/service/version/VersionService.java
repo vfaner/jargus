@@ -60,6 +60,8 @@ public class VersionService {
             .build();
     /** 发布说明渲染锁与远端刷新锁分离，首屏不被网络检查阻塞。 */
     private final Object notesLock = new Object();
+    /** 串行化「忽略」持久化与刷新写缓存，避免两者互相覆盖状态。 */
+    private final Object artifactLock = new Object();
 
     private volatile Cached cached;
     /** 当前版本发布说明的渲染结果缓存（含 null 情形）。 */
@@ -72,8 +74,7 @@ public class VersionService {
                           @Value("${app.version:}") String currentVersion,
                           @Value("${app.update-check.enabled:true}") boolean enabled) {
         this(feed, giteeFeed, artifactComparison, dismissal,
-                StringUtils.hasText(currentVersion) ? currentVersion.trim() : null,
-                enabled, daemonExecutor());
+                currentVersion, enabled, daemonExecutor());
     }
 
     /** 测试缝：注入假 feed 与同步执行器（如 Runnable::run），包内可见。 */
@@ -84,23 +85,11 @@ public class VersionService {
         this.giteeFeed = giteeFeed;
         this.artifactComparison = artifactComparison;
         this.dismissal = dismissal;
-        this.currentVersion = currentVersion;
+        // 配置写成 v2.0.7 时统一成 2.0.7，避免与 tag 比较、拼发布说明路径时多一层 v
+        this.currentVersion =
+                StringUtils.hasText(currentVersion) ? stripV(currentVersion.trim()) : null;
         this.enabled = enabled;
         this.refreshExecutor = refreshExecutor;
-    }
-
-    /** 测试缝：只关心版本状态时省略安装包比对/忽略。 */
-    VersionService(ReleaseFeed feed, ReleaseFeed giteeFeed,
-                   String currentVersion, boolean enabled, Executor refreshExecutor) {
-        this(feed, giteeFeed, null, null, currentVersion, enabled, refreshExecutor);
-    }
-
-    /** 测试缝：同步执行 + 安装包比对/忽略。 */
-    VersionService(ReleaseFeed feed, ReleaseFeed giteeFeed,
-                   ArtifactComparison artifactComparison, ArtifactDismissal dismissal,
-                   String currentVersion, boolean enabled) {
-        this(feed, giteeFeed, artifactComparison, dismissal,
-                currentVersion, enabled, Runnable::run);
     }
 
     /** 每次检查一条短命守护线程，空闲时不在退出阶段拴住线程池。 */
@@ -172,17 +161,15 @@ public class VersionService {
             String latestVersion = stripV(latest.tag());
             int cmp = currentVersion == null ? 0 : compareVersions(latestVersion, currentVersion);
             boolean update = currentVersion != null && cmp > 0;
-            boolean artifactUpdated = false;
-            if (currentVersion != null && cmp == 0) {
-                ArtifactComparison.Comparison comparison = compareArtifact(latest);
-                String key = comparison.remoteIdentity();
-                artifactUpdated = comparison.result() == ArtifactComparison.Result.DIFFERENT
-                        && StringUtils.hasText(key)
-                        && !isDismissed(key);
-            }
+            boolean artifactUpdated = currentVersion != null && cmp == 0
+                    && unignoredArtifactKey(latest) != null;
             return new UpdateCheck(true, update || artifactUpdated, artifactUpdated,
                     currentVersion, latestVersion, latest.tag(),
                     trustedReleaseUrl(latest.htmlUrl()));
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return new UpdateCheck(false, false, false,
+                    currentVersion, null, null, null);
         } catch (Exception e) {
             log.debug("版本检查失败: {}", e.toString());
             return new UpdateCheck(false, false, false,
@@ -201,14 +188,23 @@ public class VersionService {
                 || !StringUtils.hasText(c.artifactKey()) || dismissal == null) {
             return false;
         }
+        String key = c.artifactKey();
         try {
-            dismissal.dismiss(c.artifactKey());
-            cached = new Cached(VersionInfo.State.UP_TO_DATE,
-                    c.latestTag(), c.latestVersion(), c.releaseUrl(), c.latestPublishedDate(),
-                    null, null, c.latestSource(),
-                    c.giteeLatestVersion(), c.giteeReleaseUrl(), c.giteeLatestPublishedDate(),
-                    c.validUntil());
-            return true;
+            synchronized (artifactLock) {
+                // 等锁期间刷新可能已写入新状态/新安装包，此时这次点击不再对应旧提示
+                Cached current = cached;
+                if (current == null || current.state() != VersionInfo.State.ARTIFACT_UPDATED
+                        || !key.equals(current.artifactKey())) {
+                    return false;
+                }
+                dismissal.dismiss(key);
+                cached = new Cached(VersionInfo.State.UP_TO_DATE,
+                        current.latestTag(), current.latestVersion(), current.releaseUrl(),
+                        current.latestPublishedDate(), null, null, current.latestSource(),
+                        current.giteeLatestVersion(), current.giteeReleaseUrl(),
+                        current.giteeLatestPublishedDate(), current.validUntil());
+                return true;
+            }
         } catch (RuntimeException e) {
             log.warn("忽略安装包提示失败: {}", e.getMessage());
             return false;
@@ -220,15 +216,21 @@ public class VersionService {
         if (!refreshing.compareAndSet(false, true)) {
             return;
         }
-        refreshExecutor.execute(() -> {
-            try {
-                refresh(Instant.now());
-            } catch (Throwable t) {
-                log.debug("版本检查任务失败: {}", t.toString());
-            } finally {
-                refreshing.set(false);
-            }
-        });
+        try {
+            refreshExecutor.execute(() -> {
+                try {
+                    refresh(Instant.now());
+                } catch (Throwable t) {
+                    log.debug("版本检查任务失败: {}", t.toString());
+                } finally {
+                    refreshing.set(false);
+                }
+            });
+        } catch (RuntimeException e) {
+            // 执行器拒绝（如关闭阶段）时复位，否则本次进程再也触发不了检查
+            refreshing.set(false);
+            log.debug("版本检查任务提交失败: {}", e.toString());
+        }
     }
 
     private synchronized Cached refresh(Instant now) {
@@ -239,6 +241,13 @@ public class VersionService {
         ReleaseFeed.Release latest;
         try {
             latest = feed.latest();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            log.debug("版本检查被中断: {}", interrupted.toString());
+            cached = new Cached(VersionInfo.State.UNKNOWN,
+                    null, null, null, null, null, null, null,
+                    null, null, null, now.plus(NEGATIVE_TTL));
+            return cached;
         } catch (Exception e) {
             log.debug("版本检查失败: {}", e.toString());
             // 链式源已尝试 GitHub 与 Gitee；两源都失败时 Gitee 栏也没有可展示内容
@@ -262,10 +271,8 @@ public class VersionService {
             if (cmp > 0) {
                 state = VersionInfo.State.UPDATE_AVAILABLE;
             } else if (cmp == 0) {
-                ArtifactComparison.Comparison comparison = compareArtifact(latest);
-                String key = comparison.remoteIdentity();
-                if (comparison.result() == ArtifactComparison.Result.DIFFERENT
-                        && StringUtils.hasText(key) && !isDismissed(key)) {
+                String key = unignoredArtifactKey(latest);
+                if (key != null) {
                     state = VersionInfo.State.ARTIFACT_UPDATED;
                     artifactKey = key;
                     ReleaseFeed.Asset asset = latest.jarAsset();
@@ -296,16 +303,39 @@ public class VersionService {
                     giteeVersion = stripV(gitee.tag());
                     giteeUrl = trustedReleaseUrl(gitee.htmlUrl());
                     giteeDate = formatDate(gitee.publishedAt());
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    log.debug("Gitee 版本检查被中断: {}", interrupted.toString());
                 } catch (Exception e) {
                     log.debug("Gitee 版本检查失败: {}", e.toString());
                 }
             }
         }
 
-        cached = new Cached(state, latest.tag(), latestVersion, releaseUrl, latestDate,
-                artifactDate, artifactKey, latest.source(),
-                giteeVersion, giteeUrl, giteeDate, now.plus(POSITIVE_TTL));
-        return cached;
+        // 与 dismissArtifact 共用一把锁：DB 复核和写缓存必须是原子的，
+        // 否则「忽略」刚写入的记录可能被这次刷新的旧判定覆盖
+        synchronized (artifactLock) {
+            if (state == VersionInfo.State.ARTIFACT_UPDATED && isDismissed(artifactKey)) {
+                state = VersionInfo.State.UP_TO_DATE;
+                artifactKey = null;
+                artifactDate = null;
+            }
+            cached = new Cached(state, latest.tag(), latestVersion, releaseUrl, latestDate,
+                    artifactDate, artifactKey, latest.source(),
+                    giteeVersion, giteeUrl, giteeDate, now.plus(POSITIVE_TTL));
+            return cached;
+        }
+    }
+
+    /** 同版本附件与运行 jar 不同且未被忽略时返回远端身份，否则 null。 */
+    private String unignoredArtifactKey(ReleaseFeed.Release release) {
+        ArtifactComparison.Comparison comparison = compareArtifact(release);
+        String key = comparison.remoteIdentity();
+        if (comparison.result() == ArtifactComparison.Result.DIFFERENT
+                && StringUtils.hasText(key) && !isDismissed(key)) {
+            return key;
+        }
+        return null;
     }
 
     private ArtifactComparison.Comparison compareArtifact(ReleaseFeed.Release release) {

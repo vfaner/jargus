@@ -59,7 +59,6 @@ class GiteeReleaseFeedTest {
         ReleaseFeed.Asset jar = release.jarAsset();
         assertEquals(456L, jar.sizeBytes());
         assertNull(jar.sha256(), "Gitee 不提供摘要");
-        assertEquals("size:456", jar.identity());
 
         ReleaseFeed.Asset versioned = release.assets().get(1);
         assertEquals("https://gitee.com/super_rgh/jargus/releases/download/v2.0.7/jargus-2.0.7.jar",

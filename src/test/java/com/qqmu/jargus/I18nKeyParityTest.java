@@ -34,7 +34,8 @@ class I18nKeyParityTest {
                 "settings.artifactUpdated",
                 "settings.artifactUpdatedShort",
                 "settings.artifactDismiss",
-                "settings.artifactDismissHelp"}) {
+                "settings.artifactDismissHelp",
+                "settings.artifactDismissFailed"}) {
             assertTrue(en.containsKey(key), "英文缺少 " + key);
             assertTrue(zh.containsKey(key), "中文缺少 " + key);
         }

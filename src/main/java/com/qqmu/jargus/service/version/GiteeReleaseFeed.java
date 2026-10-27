@@ -1,11 +1,9 @@
 package com.qqmu.jargus.service.version;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -81,9 +79,9 @@ public class GiteeReleaseFeed implements ReleaseFeed {
         Matcher m = HTTPS_URL.matcher(url);
         if (!m.matches()) {
             m = SSH_URL.matcher(url);
-        }
-        if (!m.matches()) {
-            throw new IllegalArgumentException("不支持的 Gitee 仓库地址: " + url);
+            if (!m.matches()) {
+                throw new IllegalArgumentException("不支持的 Gitee 仓库地址: " + url);
+            }
         }
         String repo = "https://gitee.com/" + m.group(1) + "/" + m.group(2);
         return new String[]{"https://gitee.com/api/v5/repos/" + m.group(1) + "/" + m.group(2), repo};
@@ -97,7 +95,7 @@ public class GiteeReleaseFeed implements ReleaseFeed {
     @Override
     public Release byTag(String tag) throws Exception {
         return fetch(apiBase + "/releases/tags/"
-                + URLEncoder.encode(tag, StandardCharsets.UTF_8).replace("+", "%20"));
+                + ReleaseSupport.encodePathSegment(tag));
     }
 
     private Release fetch(String url) throws Exception {
@@ -120,34 +118,34 @@ public class GiteeReleaseFeed implements ReleaseFeed {
     /** 解析 release JSON（包级可见，单测直接喂字符串，不碰网络）。 */
     static Release parse(String body, String repoUrl) throws Exception {
         JsonNode json = MAPPER.readTree(body);
-        String tag = text(json, "tag_name");
+        String tag = ReleaseSupport.text(json, "tag_name");
         if (tag == null) {
             throw new IllegalStateException("Gitee API 响应缺少 tag_name");
         }
         // v5 发布对象不保证带 html_url，缺省时按仓库地址拼发布页
-        String htmlUrl = text(json, "html_url");
+        String htmlUrl = ReleaseSupport.text(json, "html_url");
         if (htmlUrl == null) {
             htmlUrl = (repoUrl == null ? "" : repoUrl) + "/releases/tag/"
-                    + URLEncoder.encode(tag, StandardCharsets.UTF_8).replace("+", "%20");
+                    + ReleaseSupport.encodePathSegment(tag);
         }
-        Instant publishedAt = ReleaseFeed.parseInstant(text(json, "created_at"));
+        Instant publishedAt = ReleaseFeed.parseInstant(ReleaseSupport.text(json, "created_at"));
 
         List<Asset> assets = new ArrayList<>();
         JsonNode arr = json.path("assets");
         if (arr.isArray()) {
             for (JsonNode item : arr) {
-                String name = text(item, "name");
-                String url = text(item, "browser_download_url");
+                String name = ReleaseSupport.text(item, "name");
+                String url = ReleaseSupport.text(item, "browser_download_url");
                 if (url == null) {
-                    url = text(item, "download_url");
+                    url = ReleaseSupport.text(item, "download_url");
                 }
                 if (name == null || url == null) {
                     continue;
                 }
                 Long size = item.path("size").isNumber() ? item.path("size").asLong() : null;
-                String uploaded = text(item, "updated_at");
+                String uploaded = ReleaseSupport.text(item, "updated_at");
                 if (uploaded == null) {
-                    uploaded = text(item, "created_at");
+                    uploaded = ReleaseSupport.text(item, "created_at");
                 }
                 assets.add(new Asset(name, url, size, null,
                         ReleaseFeed.parseInstant(uploaded)));
@@ -155,14 +153,5 @@ public class GiteeReleaseFeed implements ReleaseFeed {
         }
         return new Release(tag, htmlUrl, publishedAt, json.path("body").asText(""),
                 assets, Source.GITEE);
-    }
-
-    private static String text(JsonNode node, String field) {
-        JsonNode value = node.path(field);
-        if (value.isMissingNode() || value.isNull()) {
-            return null;
-        }
-        String text = value.asText();
-        return text == null || text.isBlank() ? null : text;
     }
 }

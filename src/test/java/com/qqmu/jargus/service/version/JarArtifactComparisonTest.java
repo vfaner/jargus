@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** 安装包比对：摘要优先、大小其次、HEAD 兜底，非可信 URL/exploded 启动一律 UNKNOWN。 */
+/** 安装包比对：摘要优先、GitHub 大小其次、HEAD 兜底（Gitee size 忽略），非可信 URL/exploded 启动一律 UNKNOWN。 */
 class JarArtifactComparisonTest {
 
     private static final String GITHUB_ASSET =
@@ -61,6 +61,23 @@ class JarArtifactComparisonTest {
                 compare(jar, asset(null, size + 1), url -> null);
         assertEquals(ArtifactComparison.Result.DIFFERENT, different.result());
         assertEquals("size:" + (size + 1), different.remoteIdentity());
+    }
+
+    @Test
+    void giteeAssetSizeIsIgnored() throws Exception {
+        Path jar = jarWithBytes("abc");
+        long size = Files.size(jar);
+        ReleaseFeed.Release gitee = new ReleaseFeed.Release("v2.0.7",
+                "https://gitee.com/super_rgh/jargus/releases/tag/v2.0.7", null, "",
+                List.of(new ReleaseFeed.Asset("jargus.jar",
+                        "https://gitee.com/super_rgh/jargus/releases/download/v2.0.7/jargus.jar",
+                        size, null)), ReleaseFeed.Source.GITEE);
+
+        assertEquals(ArtifactComparison.Result.UNKNOWN,
+                compareRelease(jar, gitee, url -> null).result(),
+                "Gitee 的 size 不参与比较，HEAD 失败即 UNKNOWN");
+        assertEquals(ArtifactComparison.Result.SAME,
+                compareRelease(jar, gitee, url -> size).result());
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.qqmu.jargus.controller;
 
 import com.qqmu.jargus.security.PublicAccess;
 import com.qqmu.jargus.security.UserContext;
+import com.qqmu.jargus.service.version.VersionService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -35,13 +36,17 @@ public class GlobalModelAdvice {
 
     @ModelAttribute("appVersion")
     public String appVersion() {
-        return (appVersion != null && !appVersion.isBlank()) ? "v" + appVersion.trim() : null;
+        // 配置写成 v2.0.7 时不能显示成 vv2.0.7
+        return (appVersion != null && !appVersion.isBlank())
+                ? "v" + VersionService.stripV(appVersion.trim()) : null;
     }
 
     @ModelAttribute("assetVersion")
     public String assetVersion() {
-        String v = (assetVersion != null && !assetVersion.isBlank()) ? assetVersion.trim() : appVersion;
-        return (v != null && !v.isBlank()) ? "v" + v.trim() : null;
+        String v = (assetVersion != null && !assetVersion.isBlank())
+                ? assetVersion.trim() : appVersion;
+        return (v != null && !v.isBlank())
+                ? "v" + VersionService.stripV(v.trim()) : null;
     }
 
     /** 导航栏图标与打赏弹窗里的仓库链接 */

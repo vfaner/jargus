@@ -45,10 +45,17 @@ public class ChainedReleaseFeed implements ReleaseFeed {
     private Release fetch(FeedCall call) throws Exception {
         try {
             return call.get(github);
+        } catch (InterruptedException interrupted) {
+            // 线程被取消时不应再打 Gitee，恢复中断标记交给上层
+            Thread.currentThread().interrupt();
+            throw interrupted;
         } catch (Exception githubFailure) {
             log.debug("GitHub 发布信息不可用，改用 Gitee: {}", githubFailure.toString());
             try {
                 return call.get(gitee);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw interrupted;
             } catch (Exception giteeFailure) {
                 IllegalStateException failure =
                         new IllegalStateException("GitHub 与 Gitee 发布信息均不可用", giteeFailure);

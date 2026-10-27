@@ -13,6 +13,7 @@ import org.springframework.dao.DuplicateKeyException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -52,6 +53,7 @@ class DatabaseArtifactDismissalTest {
         existing.setId(UpdateArtifactDismissal.SINGLETON_ID);
         existing.setArtifactKey("sha256:old");
         when(mapper.selectById(UpdateArtifactDismissal.SINGLETON_ID)).thenReturn(existing);
+        when(mapper.updateById(any())).thenReturn(1);
 
         dismissal.dismiss("sha256:new");
 
@@ -77,6 +79,7 @@ class DatabaseArtifactDismissalTest {
         existing.setArtifactKey("sha256:old");
         when(mapper.selectById(UpdateArtifactDismissal.SINGLETON_ID)).thenReturn(null, existing);
         doThrow(new DuplicateKeyException("dup")).when(mapper).insert(any());
+        when(mapper.updateById(any())).thenReturn(1);
 
         dismissal.dismiss("sha256:new");
 
@@ -84,6 +87,33 @@ class DatabaseArtifactDismissalTest {
                 ArgumentCaptor.forClass(UpdateArtifactDismissal.class);
         verify(mapper).updateById(captor.capture());
         assertEquals("sha256:new", captor.getValue().getArtifactKey());
+    }
+
+    @Test
+    void writeFailurePropagatesToCaller() {
+        when(mapper.selectById(UpdateArtifactDismissal.SINGLETON_ID))
+                .thenThrow(new IllegalStateException("db down"));
+
+        assertThrows(IllegalStateException.class, () -> dismissal.dismiss("sha256:new"));
+    }
+
+    @Test
+    void insertFailurePropagatesToCaller() {
+        when(mapper.selectById(UpdateArtifactDismissal.SINGLETON_ID)).thenReturn(null);
+        doThrow(new IllegalStateException("disk full")).when(mapper).insert(any());
+
+        assertThrows(IllegalStateException.class, () -> dismissal.dismiss("sha256:new"));
+    }
+
+    @Test
+    void updateAffectingNoRowsIsFailure() {
+        UpdateArtifactDismissal existing = new UpdateArtifactDismissal();
+        existing.setId(UpdateArtifactDismissal.SINGLETON_ID);
+        existing.setArtifactKey("sha256:old");
+        when(mapper.selectById(UpdateArtifactDismissal.SINGLETON_ID)).thenReturn(existing);
+        when(mapper.updateById(any())).thenReturn(0);
+
+        assertThrows(IllegalStateException.class, () -> dismissal.dismiss("sha256:new"));
     }
 
     @Test

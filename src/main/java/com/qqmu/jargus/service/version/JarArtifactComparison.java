@@ -21,7 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 比较远端 release 附件与当前运行 jar：
- * 优先 SHA-256（GitHub digest），其次附件大小，最后 HEAD 取 Content-Length。
+ * 优先 SHA-256（GitHub digest），其次 GitHub 附件大小，最后 HEAD 取 Content-Length
+ * （Gitee 的 size 不参与比较）。
  *
  * <p>只信任 github.com / gitee.com 的 https 下载地址；本地 jar 只哈希一次并缓存。
  */
@@ -72,15 +73,14 @@ public class JarArtifactComparison implements ArtifactComparison {
         try {
             if (asset.sha256() != null && !asset.sha256().isBlank()) {
                 String local = localSha256(jar);
-                if (local == null) {
-                    return Comparison.unknown();
-                }
                 String remote = asset.sha256().toLowerCase(Locale.ROOT);
                 return new Comparison(local.equalsIgnoreCase(remote)
                         ? Result.SAME : Result.DIFFERENT, "sha256:" + remote);
             }
             long localBytes = localSize(jar);
-            Long remoteBytes = asset.sizeBytes();
+            // Gitee v5 的附件 size 语义未确认（jync 也选择忽略），只信任 GitHub 的 size
+            Long remoteBytes = release.source() == ReleaseFeed.Source.GITEE
+                    ? null : asset.sizeBytes();
             if (remoteBytes == null) {
                 remoteBytes = sizeProbe.contentLength(asset.url());
             }

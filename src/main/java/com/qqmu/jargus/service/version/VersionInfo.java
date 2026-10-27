@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * 系统信息页描述「当前运行版本 vs GitHub 最新发布」所需的全部字段。
+ * 系统信息页描述「当前运行版本 vs 远端最新发布（GitHub 主、Gitee 兜底）」所需的全部字段。
  * 不可变；由 {@link VersionService#snapshot()} 基于短时效缓存每次新建。
  */
 @Getter
@@ -30,7 +30,7 @@ public class VersionInfo {
     private final String currentVersion;
     /** 最新发布版本（无 v 前缀）；未知/关闭时为 null。 */
     private final String latestVersion;
-    /** 最新发布 tag，如 v1.0.1；用于链接与发布说明回查。 */
+    /** 最新发布 tag，如 v1.0.1（保留原始前缀）。 */
     private final String latestTag;
     /** 最新发布页浏览器地址。 */
     private final String releaseUrl;
