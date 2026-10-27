@@ -3,6 +3,7 @@ package com.qqmu.jargus.service;
 import com.qqmu.jargus.entity.CiToken;
 import com.qqmu.jargus.mapper.CiTokenMapper;
 import com.qqmu.jargus.util.CryptoUtil;
+import com.qqmu.jargus.util.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -29,7 +30,7 @@ public class CiTokenService {
     private static final SecureRandom random = new SecureRandom();
 
     public IPage<CiToken> list(int pageNum, int pageSize, String keyword) {
-        Page<CiToken> page = new Page<>(pageNum, pageSize);
+        Page<CiToken> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<CiToken> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like("token_name", keyword)

@@ -2,6 +2,7 @@ package com.qqmu.jargus.service;
 
 import com.qqmu.jargus.entity.ReviewRule;
 import com.qqmu.jargus.mapper.ReviewRuleMapper;
+import com.qqmu.jargus.util.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -23,7 +24,7 @@ public class ReviewRuleService {
     private final ReviewRuleMapper reviewRuleMapper;
 
     public IPage<ReviewRule> list(int pageNum, int pageSize, String category, String keyword) {
-        Page<ReviewRule> page = new Page<>(pageNum, pageSize);
+        Page<ReviewRule> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<ReviewRule> wrapper = new QueryWrapper<>();
         if (category != null && !category.isEmpty() && !"ALL".equalsIgnoreCase(category)) {
             wrapper.eq("rule_category", category);

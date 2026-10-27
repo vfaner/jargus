@@ -7,6 +7,7 @@ import com.qqmu.jargus.entity.MailSender;
 import com.qqmu.jargus.mapper.MailSenderMapper;
 import com.qqmu.jargus.util.CryptoUtil;
 import com.qqmu.jargus.util.MaskUtils;
+import com.qqmu.jargus.util.PageUtils;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class MailSenderConfigService {
     private final MessageSource messageSource;
 
     public IPage<MailSender> list(int pageNum, int pageSize, String keyword) {
-        Page<MailSender> page = new Page<>(pageNum, pageSize);
+        Page<MailSender> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<MailSender> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.and(w -> w.like("name", keyword)

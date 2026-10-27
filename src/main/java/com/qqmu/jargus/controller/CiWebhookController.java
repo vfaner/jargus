@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -46,22 +45,22 @@ public class CiWebhookController {
      *
      * @param triggerId 触发配置 ID
      * @param platform  平台: GITHUB / GITLAB / GITEE / GENERIC
-     * @param rawBody   原始请求体（GitHub HMAC 签名需要原始字节）
+     * @param rawBody   原始请求体字节（GitHub HMAC 签名必须按原始字节计算；先转 String
+     *                  再按 UTF-8 取字节，在非 UTF-8 请求或非 ASCII 内容下会与签名不一致）
      */
     @PostMapping("/{triggerId}")
     public ResponseEntity<Result<CiScanRecord>> handleWebhook(
             @PathVariable Long triggerId,
             @RequestParam(defaultValue = "GENERIC") String platform,
-            @RequestBody String rawBody,
+            @RequestBody byte[] rawBody,
             HttpServletRequest request
     ) {
         try {
-            byte[] rawBytes = rawBody.getBytes(StandardCharsets.UTF_8);
             // 先鉴权后解析：签名密钥不匹配直接 401
-            ciWebhookAuthService.verify(triggerId, request, rawBytes);
+            ciWebhookAuthService.verify(triggerId, request, rawBody);
 
             log.info("收到 CI Webhook: triggerId={}, platform={}, contentLength={}",
-                    triggerId, platform, rawBody.length());
+                    triggerId, platform, rawBody.length);
 
             // 解析 JSON
             Map<String, Object> payload = objectMapper.readValue(rawBody, Map.class);

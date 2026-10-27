@@ -396,6 +396,8 @@ public class CodeParseService {
         try (Stream<Path> stream = Files.walk(sourceRoot)) {
             return stream
                     .filter(Files::isRegularFile)
+                    // 符号链接不参与扫描：跟随链接会把快照外的本机文件读入分析结果
+                    .filter(p -> !Files.isSymbolicLink(p))
                     .filter(p -> p.toString().endsWith(".java"))
                     .filter(CodeParseService::isNotMacJunk)
                     .filter(p -> includeTest || !isTestFile(sourceRoot, p))

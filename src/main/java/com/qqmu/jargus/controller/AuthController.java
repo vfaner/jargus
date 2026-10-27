@@ -63,7 +63,13 @@ public class AuthController {
         String username = body.get("username");
         String password = body.get("password");
         String configIdStr = body.get("configId");
-        Long configId = configIdStr != null && !configIdStr.isBlank() ? Long.parseLong(configIdStr) : null;
+        Long configId;
+        try {
+            configId = configIdStr != null && !configIdStr.isBlank() ? Long.parseLong(configIdStr.trim()) : null;
+        } catch (NumberFormatException e) {
+            // 非法 configId 是客户端参数错误，不能落到全局异常处理器变成 500
+            return Result.error(400, "远端登录方式参数不正确");
+        }
         AuthService.LoginResult result = authService.loginRemote(username, password, configId);
         issueCookie(response, result.getToken());
         return Result.success(result);

@@ -3,6 +3,7 @@ package com.qqmu.jargus.service;
 import com.qqmu.jargus.checker.CheckIssue;
 import com.qqmu.jargus.entity.IgnoreRule;
 import com.qqmu.jargus.mapper.IgnoreRuleMapper;
+import com.qqmu.jargus.util.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -164,7 +165,7 @@ public class IgnoreRuleService {
     // ==================== CRUD ====================
 
     public IPage<IgnoreRule> list(int pageNum, int pageSize, String keyword) {
-        Page<IgnoreRule> page = new Page<>(pageNum, pageSize);
+        Page<IgnoreRule> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<IgnoreRule> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.and(w -> w.like("rule_code", keyword)

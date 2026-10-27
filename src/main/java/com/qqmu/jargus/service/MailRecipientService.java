@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qqmu.jargus.entity.MailRecipient;
 import com.qqmu.jargus.mapper.MailRecipientMapper;
+import com.qqmu.jargus.util.PageUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class MailRecipientService {
     private final MailRecipientMapper mailRecipientMapper;
 
     public IPage<MailRecipient> list(int pageNum, int pageSize, String keyword) {
-        Page<MailRecipient> page = new Page<>(pageNum, pageSize);
+        Page<MailRecipient> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<MailRecipient> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.and(w -> w.like("name", keyword).or().like("email", keyword));

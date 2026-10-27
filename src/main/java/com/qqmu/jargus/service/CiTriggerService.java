@@ -5,6 +5,7 @@ import com.qqmu.jargus.entity.CiScanRecord;
 import com.qqmu.jargus.mapper.CiTriggerConfigMapper;
 import com.qqmu.jargus.mapper.CiScanRecordMapper;
 import com.qqmu.jargus.util.CryptoUtil;
+import com.qqmu.jargus.util.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -37,7 +38,7 @@ public class CiTriggerService {
     // ==================== 触发配置 CRUD ====================
 
     public IPage<CiTriggerConfig> list(int pageNum, int pageSize, String keyword) {
-        Page<CiTriggerConfig> page = new Page<>(pageNum, pageSize);
+        Page<CiTriggerConfig> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<CiTriggerConfig> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like("config_name", keyword);
@@ -196,7 +197,7 @@ public class CiTriggerService {
     // ==================== CI 扫描记录 ====================
 
     public IPage<CiScanRecord> listRecords(int pageNum, int pageSize, Long triggerConfigId) {
-        Page<CiScanRecord> page = new Page<>(pageNum, pageSize);
+        Page<CiScanRecord> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<CiScanRecord> wrapper = new QueryWrapper<>();
         if (triggerConfigId != null) {
             wrapper.eq("trigger_config_id", triggerConfigId);

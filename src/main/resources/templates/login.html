@@ -154,8 +154,19 @@
 
         function redirectTarget() {
             var p = new URLSearchParams(location.search).get('redirect');
-            // 只允许站内相对路径，杜绝开放重定向
-            if (p && p.charAt(0) === '/' && p.indexOf('//') !== 0) return p;
+            // 只允许站内相对路径，杜绝开放重定向。
+            // 仅判断开头是否为 '/' 不够：/\evil.com 会被浏览器归一化成 //evil.com 跳到外站，
+            // 因此用 URL 解析后比对 origin，且只取 path/query/hash 回跳。
+            if (p) {
+                try {
+                    var u = new URL(p, location.origin);
+                    if (u.origin === location.origin && p.charAt(0) === '/') {
+                        return u.pathname + u.search + u.hash;
+                    }
+                } catch (e) {
+                    // 非法 URL 走默认页
+                }
+            }
             return '/dashboard';
         }
 

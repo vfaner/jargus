@@ -17,6 +17,7 @@ import com.qqmu.jargus.env.ProjectInfo;
 import com.qqmu.jargus.test.UnitTestRunner;
 import com.qqmu.jargus.util.FileUtils;
 import com.qqmu.jargus.util.IssuePoints;
+import com.qqmu.jargus.util.PageUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -222,6 +223,12 @@ public class ScanTaskService {
                 try {
                     // 跳过 .git 目录及其全部内容（relativize 段含 .git 即整个子树）
                     if (isVcsMetadata(src.relativize(p))) {
+                        return;
+                    }
+                    // 跳过符号链接：git 仓库可携带指向本机任意文件的链接，跟随复制会把
+                    // ~/.ssh/id_rsa 等读进快照，再随 AI 评审/上下文接口外泄
+                    if (Files.isSymbolicLink(p)) {
+                        log.warn("跳过快照中的符号链接: {}", p);
                         return;
                     }
                     Path target = dst.resolve(src.relativize(p).toString());
@@ -920,7 +927,7 @@ public class ScanTaskService {
      * 分页获取任务列表
      */
     public IPage<ScanTask> listTasks(int pageNum, int pageSize, String keyword) {
-        Page<ScanTask> page = new Page<>(pageNum, pageSize);
+        Page<ScanTask> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<ScanTask> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like("task_name", keyword).or().like("project_name", keyword);

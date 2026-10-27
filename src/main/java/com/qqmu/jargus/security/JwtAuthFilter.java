@@ -161,6 +161,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private boolean isPublicResource(String path) {
         if (path == null) return false;
+        // 后缀白名单只适用于静态资源：/api/** 一律不走后缀豁免，
+        // 否则将来任何以 .js/.css/.png 结尾的接口都会变成免登录
+        if (path.startsWith("/api/")) return false;
         if (path.startsWith("/static/")) return true;
         if (path.endsWith(".js") || path.endsWith(".css") || path.endsWith(".png")
                 || path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".webp")

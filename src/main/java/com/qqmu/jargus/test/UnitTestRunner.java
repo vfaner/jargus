@@ -140,7 +140,7 @@ public class UnitTestRunner {
 
             boolean finished = process.waitFor(timeoutSec, TimeUnit.SECONDS);
             if (!finished) {
-                process.destroyForcibly();
+                killProcessTree(process);
                 outputThread.interrupt();
                 // 等输出线程收尾，避免残留线程持有被销毁进程的流句柄
                 try {
@@ -212,7 +212,7 @@ public class UnitTestRunner {
 
             boolean finished = process.waitFor(timeoutSec, TimeUnit.SECONDS);
             if (!finished) {
-                process.destroyForcibly();
+                killProcessTree(process);
                 outputThread.interrupt();
                 // 与 Maven 分支对齐：等输出线程收尾，避免残留线程持有被销毁进程的流句柄
                 try {
@@ -339,6 +339,15 @@ public class UnitTestRunner {
             return parent;
         }
         return projectPath;
+    }
+
+    /**
+     * 超时后杀整棵进程树：destroyForcibly 只结束 mvn/gradle 本身，
+     * 其 fork 的 surefire JVM / Gradle daemon 会变成孤儿进程继续跑测试占 CPU。
+     */
+    private static void killProcessTree(Process process) {
+        process.descendants().forEach(ProcessHandle::destroyForcibly);
+        process.destroyForcibly();
     }
 
     private enum BuildTool {

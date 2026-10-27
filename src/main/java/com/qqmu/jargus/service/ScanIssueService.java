@@ -6,6 +6,7 @@ import com.qqmu.jargus.entity.ScanTask;
 import com.qqmu.jargus.mapper.ScanIssueMapper;
 import com.qqmu.jargus.mapper.ScanTaskMapper;
 import com.qqmu.jargus.util.IssuePoints;
+import com.qqmu.jargus.util.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -45,7 +47,7 @@ public class ScanIssueService {
             int pageNum,
             int pageSize
     ) {
-        Page<ScanIssue> page = new Page<>(pageNum, pageSize);
+        Page<ScanIssue> page = new Page<>(PageUtils.pageNum(pageNum), PageUtils.pageSize(pageSize));
         QueryWrapper<ScanIssue> wrapper = new QueryWrapper<>();
         wrapper.eq("task_id", taskId);
 
@@ -212,22 +214,26 @@ public class ScanIssueService {
         }
     }
 
-    /** 解析快照文件：snapshot 相对 → 绝对路径 → snapshot resolve 归一化；均不存在返回 null */
+    /**
+     * 解析快照文件：只允许读取快照目录内的文件。
+     * 扫描器落库的是相对路径；这里统一归一化并做 startsWith 校验，
+     * 防止异常/历史数据里的 ../ 或绝对路径把服务器任意文件读进问题上下文。
+     */
     private Path resolveSnapshotFile(String snapshotPath, String filePath) {
-        // 先尝试直接从 snapshotPath + filePath 读取
-        Path file = Paths.get(snapshotPath, filePath);
-        if (!Files.exists(file)) {
-            // 尝试 filePath 为绝对路径
-            file = Paths.get(filePath);
+        if (snapshotPath == null || filePath == null) {
+            return null;
         }
-        if (!Files.exists(file)) {
-            // 尝试相对 snapshotPath
-            Path relPath = Paths.get(filePath);
-            if (!relPath.isAbsolute()) {
-                file = Paths.get(snapshotPath).resolve(filePath).normalize();
+        try {
+            Path root = Paths.get(snapshotPath).toAbsolutePath().normalize();
+            Path rel = Paths.get(filePath);
+            Path file = rel.isAbsolute() ? rel.normalize() : root.resolve(rel).normalize();
+            if (!file.startsWith(root) || !Files.exists(file)) {
+                return null;
             }
+            return file;
+        } catch (InvalidPathException e) {
+            return null;
         }
-        return Files.exists(file) ? file : null;
     }
 
     /** 问题点区间：优先 linePoints 合并点，缺失时回退 lineStart/lineEnd，均钳制到 [1,total] */

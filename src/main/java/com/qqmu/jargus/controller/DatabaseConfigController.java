@@ -156,7 +156,10 @@ public class DatabaseConfigController {
             String newFileName = uuid + ".jar";
             Path targetPath = Path.of(driverDir, newFileName);
 
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            // 输入流必须显式关闭：Files.copy 不会替调用方关闭，上传大量驱动时会泄漏文件句柄
+            try (var in = file.getInputStream()) {
+                Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
 
             return Result.success(Map.of(
                     "fileName", newFileName,
