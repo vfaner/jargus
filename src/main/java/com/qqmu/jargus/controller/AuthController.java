@@ -7,6 +7,7 @@ import com.qqmu.jargus.security.PublicAccess;
 import com.qqmu.jargus.security.UserContext;
 import com.qqmu.jargus.service.AuthService;
 import com.qqmu.jargus.service.RemoteAuthConfigService;
+import com.qqmu.jargus.service.SsoConfigService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +36,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final RemoteAuthConfigService remoteAuthConfigService;
+    private final SsoConfigService ssoConfigService;
 
     @Value("${app.jwt-expire-hours:24}")
     private int jwtExpireHours;
@@ -121,9 +124,14 @@ public class AuthController {
      * 登出：清除 httpOnly Cookie（token 本身无状态）
      */
     @PostMapping("/logout")
-    public Result<Boolean> logout(HttpServletResponse response) {
+    public Result<Map<String, Object>> logout(HttpServletResponse response) {
         response.addHeader(HttpHeaders.SET_COOKIE, JwtAuthFilter.clearAuthCookie().toString());
-        return Result.success(true);
+        Map<String, Object> data = new HashMap<>();
+        String redirectUrl = ssoConfigService.safeLogoutRedirect();
+        if (redirectUrl != null) {
+            data.put("redirectUrl", redirectUrl);
+        }
+        return Result.success(data);
     }
 
     private void issueCookie(HttpServletResponse response, String token) {

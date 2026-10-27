@@ -473,3 +473,31 @@ CREATE TABLE IF NOT EXISTS update_artifact_dismissal (
     artifact_key VARCHAR(160) NOT NULL,
     dismissed_at TIMESTAMP NOT NULL
 );
+
+-- ============================================================
+-- 表 20: sso_config (企业统一认证配置，固定单行 id=1；无行=未配置)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sso_config (
+    id BIGINT PRIMARY KEY,
+    is_enabled BOOLEAN DEFAULT FALSE,
+    auth_mode VARCHAR(16) DEFAULT 'TICKET' NOT NULL,
+    admin_users VARCHAR(1024),
+    login_entry_url VARCHAR(512),
+    logout_redirect_url VARCHAR(512),
+    local_login_enabled BOOLEAN DEFAULT TRUE,
+    user_header VARCHAR(128),
+    admin_header VARCHAR(128),
+    admin_value VARCHAR(128),
+    secret_header_name VARCHAR(128),
+    secret_header_value VARCHAR(512),
+    validate_url VARCHAR(512),
+    validate_method VARCHAR(8) DEFAULT 'GET',
+    ticket_param VARCHAR(64) DEFAULT 'ticket',
+    success_field VARCHAR(128),
+    success_value VARCHAR(128),
+    user_field VARCHAR(128),
+    admin_field VARCHAR(128),
+    timeout_ms INTEGER DEFAULT 5000,
+    allow_insecure_http BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

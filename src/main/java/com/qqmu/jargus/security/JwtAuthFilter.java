@@ -82,17 +82,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = extractToken(request);
-        Long userId = null;
-        if (token != null && jwtUtil.validateToken(token)) {
-            userId = jwtUtil.getUserId(token);
-        }
+        // 受信网关头过滤器已完成身份解析并落库时，直接复用，避免同一请求二次查库
+        Object headerUser = request.getAttribute(SsoHeaderAuthFilter.AUTHENTICATED_USER_ATTRIBUTE);
+        SysUser user = headerUser instanceof SysUser u && Boolean.TRUE.equals(u.getIsEnabled()) ? u : null;
 
-        SysUser user = null;
-        if (userId != null) {
-            SysUser u = sysUserMapper.selectById(userId);
-            if (u != null && Boolean.TRUE.equals(u.getIsEnabled())) {
-                user = u;
+        if (user == null) {
+            String token = extractToken(request);
+            Long userId = null;
+            if (token != null && jwtUtil.validateToken(token)) {
+                userId = jwtUtil.getUserId(token);
+            }
+            if (userId != null) {
+                SysUser u = sysUserMapper.selectById(userId);
+                if (u != null && Boolean.TRUE.equals(u.getIsEnabled())) {
+                    user = u;
+                }
             }
         }
 
@@ -126,7 +130,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
     }
 
-    private String extractToken(HttpServletRequest request) {
+    public static String extractToken(HttpServletRequest request) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith("Bearer ")) {
             return header.substring(7);
@@ -144,7 +148,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private boolean isPublicEndpoint(String path, String method) {
+    public static boolean isPublicEndpoint(String path, String method) {
         if (path == null) return false;
         if ("POST".equalsIgnoreCase(method)
                 && (path.equals("/api/auth/login")
@@ -155,11 +159,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if ("GET".equalsIgnoreCase(method) && path.equals("/api/auth/remote-configs")) {
             return true;
         }
+        // 企业统一认证票据入口：企业登录中心直接重定向进入，不能要求已有登录态
+        if ("GET".equalsIgnoreCase(method) && "/sso/entry".equals(path)) {
+            return true;
+        }
         // Webhook 自带签名鉴权
         return path.startsWith("/api/ci/webhook/");
     }
 
-    private boolean isPublicResource(String path) {
+    public static boolean isPublicResource(String path) {
         if (path == null) return false;
         // 后缀白名单只适用于静态资源：/api/** 一律不走后缀豁免，
         // 否则将来任何以 .js/.css/.png 结尾的接口都会变成免登录

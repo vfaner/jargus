@@ -59,6 +59,38 @@ class SchemaDdlResourceTest {
         }
     }
 
+    @Test
+    void everyDialectScriptContainsSsoConfigTable() throws Exception {
+        for (String script : new String[]{
+                "db/schema-h2.sql", "db/schema-mysql.sql", "db/schema-postgresql.sql",
+                "db/schema-oracle.sql", "db/schema-sqlserver.sql"}) {
+            String sql = read(script).toLowerCase();
+            assertTrue(sql.contains("sso_config"), script + " 缺少 sso_config");
+            assertTrue(sql.contains("auth_mode"), script + " 缺少 auth_mode 列");
+            assertFalse(sql.contains(" mode "), script + " auth_mode 不应写入保留字 mode");
+        }
+    }
+
+    @Test
+    void ssoConfigDdlUsesDialectTypes() throws Exception {
+        for (String script : new String[]{
+                "db/schema-h2.sql", "db/schema-mysql.sql", "db/schema-postgresql.sql"}) {
+            assertTrue(read(script).contains("CREATE TABLE IF NOT EXISTS sso_config"),
+                    script + " 应使用 IF NOT EXISTS");
+        }
+
+        String oracle = read("db/schema-oracle.sql");
+        assertTrue(oracle.contains("CREATE TABLE sso_config"));
+        assertTrue(oracle.contains("VARCHAR2(16)"));
+        assertFalse(oracle.contains("CREATE TABLE IF NOT EXISTS sso_config"));
+
+        String sqlServer = read("db/schema-sqlserver.sql");
+        assertTrue(sqlServer.contains("CREATE TABLE sso_config"));
+        assertTrue(sqlServer.contains("NVARCHAR(16)"));
+        assertTrue(sqlServer.contains("DATETIME2"));
+        assertFalse(sqlServer.contains("CREATE TABLE IF NOT EXISTS sso_config"));
+    }
+
     private static String read(String path) throws Exception {
         try (InputStream in = SchemaDdlResourceTest.class.getClassLoader().getResourceAsStream(path)) {
             if (in == null) {

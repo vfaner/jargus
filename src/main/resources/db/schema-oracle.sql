@@ -460,3 +460,31 @@ CREATE TABLE update_artifact_dismissal (
     artifact_key VARCHAR2(160) NOT NULL,
     dismissed_at TIMESTAMP NOT NULL
 );
+
+-- ============================================================
+-- 表 20: sso_config (企业统一认证配置，固定单行 id=1；无行=未配置)
+-- ============================================================
+CREATE TABLE sso_config (
+    id NUMBER(19) PRIMARY KEY,
+    is_enabled NUMBER(1) DEFAULT 0,
+    auth_mode VARCHAR2(16) DEFAULT 'TICKET' NOT NULL,
+    admin_users VARCHAR2(1024),
+    login_entry_url VARCHAR2(512),
+    logout_redirect_url VARCHAR2(512),
+    local_login_enabled NUMBER(1) DEFAULT 1,
+    user_header VARCHAR2(128),
+    admin_header VARCHAR2(128),
+    admin_value VARCHAR2(128),
+    secret_header_name VARCHAR2(128),
+    secret_header_value VARCHAR2(512),
+    validate_url VARCHAR2(512),
+    validate_method VARCHAR2(8) DEFAULT 'GET',
+    ticket_param VARCHAR2(64) DEFAULT 'ticket',
+    success_field VARCHAR2(128),
+    success_value VARCHAR2(128),
+    user_field VARCHAR2(128),
+    admin_field VARCHAR2(128),
+    timeout_ms NUMBER(10) DEFAULT 5000,
+    allow_insecure_http NUMBER(1) DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

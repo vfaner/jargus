@@ -6,6 +6,12 @@
 app:
   # 默认开启登录鉴权（可用 APP_AUTH_ENABLED=false 关闭）
   auth-enabled: ${APP_AUTH_ENABLED:true}
+  sso:
+    # 破窗：配置错误导致无法登录时，临时置 true 启动一次以恢复本地登录
+    reset-local-login: ${APP_SSO_RESET_LOCAL_LOGIN:false}
+  security:
+    # 网关头认证只信任这些直连代理地址（IP 或 CIDR），默认仅本机
+    trusted-proxies: ${APP_TRUSTED_PROXIES:127.0.0.1,::1}
   # JWT 签名密钥：未注入 APP_JWT_SECRET 时每次启动随机生成（重启/重建后需重新登录，
   # 且不存在可被伪造的公开默认密钥）；需跨重启保留登录态才注入固定值
   jwt-secret: ${APP_JWT_SECRET:}

@@ -540,9 +540,15 @@
         }
 
         function doLogout() {
-            UI.api.post('/api/auth/logout').catch(function () {}).then(function () {
+            UI.api.post('/api/auth/logout').catch(function () {}).then(function (data) {
                 UI.token.clear();
-                location.href = '/login';
+                var target = data && data.redirectUrl;
+                // 后端已校验；这里再兜一层，只允许 http(s) 或站内单斜杠路径
+                var ok = typeof target === 'string' && target
+                    && (/^https?:\/\//i.test(target)
+                        || (target.charAt(0) === '/' && target.charAt(1) !== '/'
+                            && target.charAt(1) !== '\\'));
+                location.href = ok ? target : '/login';
             });
         }
         var logoutForm = document.getElementById('logout-form');

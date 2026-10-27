@@ -1176,6 +1176,15 @@ fieldset.bare { border: 0; padding: 0; margin: 0; min-width: 0; }
   line-height: 1.55;
 }
 .login-hint .ico { width: 14px; height: 14px; flex-shrink: 0; color: var(--info); }
+.login-note { margin: 0 0 18px; }
+.login-sso { margin-bottom: 0; }
+.login-or {
+  display: flex; align-items: center; gap: 10px;
+  margin: 16px 0 18px; font-size: 12.5px; color: var(--ink-mute);
+}
+.login-or::before, .login-or::after {
+  content: ""; flex: 1; height: 1px; background: var(--line);
+}
 
 /* ─── 小尺寸弹窗 / 表单操作栏 / 字段提示 / 横幅链接 ───────── */
 .modal-sm { max-width: 400px; }

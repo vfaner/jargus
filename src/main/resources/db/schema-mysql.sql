@@ -477,4 +477,32 @@ CREATE TABLE IF NOT EXISTS update_artifact_dismissal (
     dismissed_at DATETIME NOT NULL COMMENT '忽略时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='安装包重发提示忽略记录';
 
+-- ============================================================
+-- 表 20: sso_config (企业统一认证配置，固定单行 id=1；无行=未配置)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sso_config (
+    id BIGINT PRIMARY KEY COMMENT '固定为 1',
+    is_enabled BOOLEAN DEFAULT FALSE COMMENT 'SSO 总开关',
+    auth_mode VARCHAR(16) DEFAULT 'TICKET' NOT NULL COMMENT 'TICKET / HEADER',
+    admin_users VARCHAR(1024) COMMENT '管理员用户名白名单，逗号分隔',
+    login_entry_url VARCHAR(512) COMMENT '企业登录中心地址',
+    logout_redirect_url VARCHAR(512) COMMENT '登出后回跳地址',
+    local_login_enabled BOOLEAN DEFAULT TRUE COMMENT '是否允许本地账号密码登录',
+    user_header VARCHAR(128) COMMENT 'HEADER 模式用户名头',
+    admin_header VARCHAR(128) COMMENT 'HEADER 模式管理员标记头',
+    admin_value VARCHAR(128) COMMENT '管理员标记匹配值',
+    secret_header_name VARCHAR(128) COMMENT '共享密钥头名',
+    secret_header_value VARCHAR(512) COMMENT '共享密钥（加密存储）',
+    validate_url VARCHAR(512) COMMENT '票据校验接口',
+    validate_method VARCHAR(8) DEFAULT 'GET' COMMENT 'GET / POST',
+    ticket_param VARCHAR(64) DEFAULT 'ticket' COMMENT '票据参数名',
+    success_field VARCHAR(128) COMMENT '成功标志字段路径',
+    success_value VARCHAR(128) COMMENT '成功标志匹配值',
+    user_field VARCHAR(128) COMMENT '用户名字段路径',
+    admin_field VARCHAR(128) COMMENT '管理员标记字段路径',
+    timeout_ms INT DEFAULT 5000 COMMENT '校验超时（毫秒）',
+    allow_insecure_http BOOLEAN DEFAULT FALSE COMMENT '是否允许 http 端点',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='企业统一认证配置';
+
 SET FOREIGN_KEY_CHECKS = 1;

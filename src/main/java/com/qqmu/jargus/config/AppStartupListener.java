@@ -9,8 +9,10 @@ import com.qqmu.jargus.service.ReportService;
 import com.qqmu.jargus.service.SchemaInitService;
 import com.qqmu.jargus.service.SchemaMigrations;
 import com.qqmu.jargus.service.SeverityMigrationService;
+import com.qqmu.jargus.service.SsoConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -36,6 +38,10 @@ public class AppStartupListener {
     private final IssueMergeService issueMergeService;
     private final SeverityMigrationService severityMigrationService;
     private final ReportService reportService;
+    private final SsoConfigService ssoConfigService;
+
+    @Value("${app.sso.reset-local-login:false}")
+    private boolean resetLocalLogin;
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
@@ -62,6 +68,9 @@ public class AppStartupListener {
 
             // 增量迁移（幂等；对活库执行，方言中立）
             schemaMigrations.runAll(dataSource, dialect);
+
+            // 统一认证安全网：配置错误导致本地登录关闭且 SSO 不可用时自动放开
+            ssoConfigService.applyStartupSafetyNets(resetLocalLogin);
 
             // 表结构就绪后，刷新依赖数据库的缓存（@PostConstruct 阶段表可能还不存在）
             ignoreRuleService.refreshCache();

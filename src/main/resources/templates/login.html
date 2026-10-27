@@ -56,20 +56,40 @@
 
     <div class="login-card">
 
-        <div class="login-tabs" role="tablist">
-            <button type="button" class="login-tab active" id="tab-local" data-tab="local"
+        <p class="login-hint login-note" th:if="${showHeaderNotice}">
+            <svg class="ico"><use href="#shield-check"/></svg>
+            <span th:text="${showLocalForm or showRemoteTab} ? #{login.sso.headerNotice} : #{login.sso.headerNoLocal}">SSO via gateway</span>
+        </p>
+
+        <a class="btn btn-primary btn-lg login-submit login-sso" th:if="${showSsoButton}"
+           th:href="${ssoEntryUrl}">
+            <svg class="ico"><use href="#shield-check"/></svg>
+            <span th:text="#{login.sso.button}">Enterprise SSO sign-in</span>
+        </a>
+
+        <div class="login-or" th:if="${showSsoButton and (showLocalForm or showRemoteTab)}">
+            <span th:text="#{login.sso.or}">or sign in with an account</span>
+        </div>
+
+        <div class="login-tabs" role="tablist" th:if="${showLocalForm or showRemoteTab}">
+            <button type="button" class="login-tab" id="tab-local" data-tab="local"
+                    th:classappend="${showLocalForm} ? 'active'"
+                    th:if="${showLocalForm}"
                     th:text="#{login.local}">Local sign-in</button>
             <button type="button" class="login-tab" id="tab-remote" data-tab="remote"
+                    th:classappend="${!showLocalForm and showRemoteTab} ? 'active'"
+                    th:if="${showRemoteTab}"
                     th:text="#{login.remote}">OA sign-in</button>
         </div>
 
-        <div class="alert alert-danger" id="login-error" hidden>
+        <div class="alert alert-danger" id="login-error" th:hidden="${ssoErrorText == null}">
             <svg class="ico"><use href="#x-circle-fill"/></svg>
-            <div class="alert-body" id="login-error-text"></div>
+            <div class="alert-body" id="login-error-text" th:text="${ssoErrorText} ?: ''"></div>
         </div>
 
         <!--/* 本地登录 */-->
-        <form id="form-local" class="login-form" method="post" action="javascript:void(0)" autocomplete="off">
+        <form id="form-local" class="login-form" method="post" action="javascript:void(0)" autocomplete="off"
+              th:if="${showLocalForm}">
             <div class="field">
                 <label for="username" th:text="#{login.username}">Username</label>
                 <input type="text" class="input" id="username" name="username"
@@ -98,7 +118,8 @@
         </form>
 
         <!--/* 远端 OA 登录 */-->
-        <form id="form-remote" class="login-form" method="post" action="javascript:void(0)" hidden autocomplete="off">
+        <form id="form-remote" class="login-form" method="post" action="javascript:void(0)" autocomplete="off"
+              th:if="${showRemoteTab}" th:hidden="${showLocalForm}">
             <div class="field">
                 <label for="remote-config" th:text="#{login.remoteConfig}">OA identity source</label>
                 <select class="select" id="remote-config" required>
@@ -203,56 +224,67 @@
             });
         }
 
-        document.getElementById('form-local').addEventListener('submit', function (e) {
-            e.preventDefault();
-            submit('/api/auth/login', 'local-submit', {
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value
+        var localForm = document.getElementById('form-local');
+        if (localForm) {
+            localForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                submit('/api/auth/login', 'local-submit', {
+                    username: document.getElementById('username').value.trim(),
+                    password: document.getElementById('password').value
+                });
             });
-        });
+        }
 
-        document.getElementById('form-remote').addEventListener('submit', function (e) {
-            e.preventDefault();
-            submit('/api/auth/remote-login', 'remote-submit', {
-                configId: document.getElementById('remote-config').value,
-                username: document.getElementById('remote-username').value.trim(),
-                password: document.getElementById('remote-password').value
+        var remoteForm = document.getElementById('form-remote');
+        if (remoteForm) {
+            remoteForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                submit('/api/auth/remote-login', 'remote-submit', {
+                    configId: document.getElementById('remote-config').value,
+                    username: document.getElementById('remote-username').value.trim(),
+                    password: document.getElementById('remote-password').value
+                });
             });
-        });
+        }
 
-        // 页签切换
+        // 页签切换（统一认证/权限收紧时可能只渲染其中一个页签，需空值保护）
         document.querySelectorAll('.login-tab').forEach(function (tab) {
             tab.addEventListener('click', function () {
                 var key = tab.dataset.tab;
                 document.querySelectorAll('.login-tab').forEach(function (t) {
                     t.classList.toggle('active', t === tab);
                 });
-                document.getElementById('form-local').hidden = key !== 'local';
-                document.getElementById('form-remote').hidden = key !== 'remote';
+                if (localForm) localForm.hidden = key !== 'local';
+                if (remoteForm) remoteForm.hidden = key !== 'remote';
                 document.getElementById('login-error').hidden = true;
             });
         });
 
-        // 加载启用的远端认证源
-        fetch('/api/auth/remote-configs', {
-            headers: { 'Accept': 'application/json' },
-            credentials: 'same-origin'
-        }).then(function (r) { return r.json(); }).then(function (json) {
-            var list = (json && json.code === 200 && json.data) ? json.data : [];
-            var sel = document.getElementById('remote-config');
-            list.forEach(function (c) {
-                var opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.configName;
-                sel.appendChild(opt);
+        // 加载启用的远端认证源（仅当远端页签存在）
+        var remoteSelect = document.getElementById('remote-config');
+        if (remoteSelect) {
+            fetch('/api/auth/remote-configs', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            }).then(function (r) { return r.json(); }).then(function (json) {
+                var list = (json && json.code === 200 && json.data) ? json.data : [];
+                list.forEach(function (c) {
+                    var opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.configName;
+                    remoteSelect.appendChild(opt);
+                });
+                if (!list.length) {
+                    var remoteTab = document.getElementById('tab-remote');
+                    if (remoteTab) remoteTab.disabled = true;
+                    var hint = document.getElementById('oa-hint');
+                    if (hint) hint.hidden = false;
+                }
+            }).catch(function () {
+                var remoteTab = document.getElementById('tab-remote');
+                if (remoteTab) remoteTab.disabled = true;
             });
-            if (!list.length) {
-                document.getElementById('tab-remote').disabled = true;
-                document.getElementById('oa-hint').hidden = false;
-            }
-        }).catch(function () {
-            document.getElementById('tab-remote').disabled = true;
-        });
+        }
     })();
 </script>
 </body>

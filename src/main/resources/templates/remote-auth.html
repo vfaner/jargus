@@ -8,15 +8,189 @@
         <h2 th:text="#{remoteauth.title}">Remote Auth</h2>
         <p th:text="#{remoteauth.subtitle}">Integrate enterprise OA / SSO</p>
     </div>
-    <div class="page-actions">
+</div>
+
+<div class="card">
+    <div class="card-head">
+        <h3>
+            <svg class="ico"><use href="#shield-check"/></svg>
+            <span th:text="#{remoteauth.sso.title}">Enterprise SSO</span>
+        </h3>
+        <span class="hint" th:text="#{remoteauth.sso.subtitle}">Sign in once at the enterprise platform</span>
+    </div>
+    <div class="card-body">
+        <form id="sso-form" autocomplete="off">
+            <div class="grid-2">
+                <label class="switch">
+                    <input type="checkbox" id="sso-enabled">
+                    <span class="track"></span>
+                    <span class="switch-text"><strong th:text="#{remoteauth.sso.enabled}">Enable SSO</strong></span>
+                </label>
+                <label class="switch">
+                    <input type="checkbox" id="sso-localLogin">
+                    <span class="track"></span>
+                    <span class="switch-text">
+                        <strong th:text="#{remoteauth.sso.localLogin}">Allow local sign-in</strong>
+                        <span class="help" th:text="#{remoteauth.sso.localLoginHint}">When off, only SSO is allowed</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="grid-2">
+                <div class="field">
+                    <label for="sso-mode" th:text="#{remoteauth.sso.mode}">Integration mode</label>
+                    <select class="select" id="sso-mode">
+                        <option value="TICKET" th:text="#{remoteauth.sso.mode.TICKET}">Ticket callback</option>
+                        <option value="HEADER" th:text="#{remoteauth.sso.mode.HEADER}">Trusted gateway header</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="sso-adminUsers" th:text="#{remoteauth.sso.adminUsers}">Administrator usernames</label>
+                    <input type="text" class="input" id="sso-adminUsers" maxlength="1024"
+                           th:placeholder="#{remoteauth.sso.adminUsersPlaceholder}">
+                </div>
+            </div>
+            <div class="field-hint" th:text="#{remoteauth.sso.roles.hint}">Admin whitelist</div>
+
+            <div class="divider"></div>
+
+            <!-- 票据回调 -->
+            <div id="sso-ticket-fields">
+                <p class="adv-section-title" th:text="#{remoteauth.sso.ticket.title}">Ticket callback</p>
+                <div class="field">
+                    <label for="sso-loginEntryUrl">
+                        <span th:text="#{remoteauth.sso.loginEntryUrl}">Login center URL</span><span class="req">*</span>
+                    </label>
+                    <input type="url" class="input" id="sso-loginEntryUrl" maxlength="512"
+                           placeholder="https://sso.company.com/login">
+                    <div class="field-hint" th:text="#{remoteauth.sso.loginEntryHint}">Portal redirects to /sso/entry</div>
+                </div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label for="sso-validateUrl">
+                            <span th:text="#{remoteauth.sso.validateUrl}">Ticket validation URL</span><span class="req">*</span>
+                        </label>
+                        <input type="url" class="input" id="sso-validateUrl" maxlength="512"
+                               placeholder="https://sso.company.com/api/validate">
+                    </div>
+                    <div class="field">
+                        <label for="sso-validateMethod" th:text="#{remoteauth.sso.validateMethod}">HTTP method</label>
+                        <select class="select" id="sso-validateMethod">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <div class="field">
+                        <label for="sso-ticketParam" th:text="#{remoteauth.sso.ticketParam}">Ticket parameter</label>
+                        <input type="text" class="input" id="sso-ticketParam" maxlength="64" placeholder="ticket">
+                    </div>
+                    <div class="field">
+                        <label for="sso-successField" th:text="#{remoteauth.sso.successField}">Success flag field</label>
+                        <input type="text" class="input" id="sso-successField" maxlength="128" placeholder="success">
+                    </div>
+                    <div class="field">
+                        <label for="sso-successValue" th:text="#{remoteauth.sso.successValue}">Success flag value</label>
+                        <input type="text" class="input" id="sso-successValue" maxlength="128" placeholder="true">
+                    </div>
+                    <div class="field">
+                        <label for="sso-userField" th:text="#{remoteauth.sso.userField}">Username field</label>
+                        <input type="text" class="input" id="sso-userField" maxlength="128" placeholder="username">
+                    </div>
+                    <div class="field">
+                        <label for="sso-adminField" th:text="#{remoteauth.sso.adminField}">Administrator flag field</label>
+                        <input type="text" class="input" id="sso-adminField" maxlength="128" placeholder="isAdmin">
+                    </div>
+                    <div class="field">
+                        <label for="sso-timeoutMs" th:text="#{remoteauth.sso.timeout}">Timeout (ms)</label>
+                        <input type="number" class="input" id="sso-timeoutMs" min="1000" max="30000" step="500">
+                    </div>
+                </div>
+                <div class="field-hint" th:text="#{remoteauth.sso.successFieldHint}">Dot paths in the JSON response</div>
+                <label class="switch">
+                    <input type="checkbox" id="sso-allowInsecureHttp">
+                    <span class="track"></span>
+                    <span class="switch-text"><strong th:text="#{remoteauth.sso.allowInsecureHttp}">Allow http://</strong></span>
+                </label>
+                <div class="field">
+                    <label for="sso-testTicket" th:text="#{remoteauth.sso.testTicket}">Test ticket (optional)</label>
+                    <input type="text" class="input" id="sso-testTicket" maxlength="4096" autocomplete="off">
+                    <div class="field-hint" th:text="#{remoteauth.sso.testTicketHint}">Leave blank to probe only</div>
+                </div>
+            </div>
+
+            <!-- 受信网关头 -->
+            <div id="sso-header-fields">
+                <p class="adv-section-title" th:text="#{remoteauth.sso.header.title}">Trusted gateway header</p>
+                <div class="field-hint" th:text="#{remoteauth.sso.headerHint}">Only trusted proxies</div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label for="sso-userHeader">
+                            <span th:text="#{remoteauth.sso.userHeader}">Username header</span><span class="req">*</span>
+                        </label>
+                        <input type="text" class="input" id="sso-userHeader" maxlength="128" placeholder="X-Auth-User">
+                    </div>
+                    <div class="field">
+                        <label for="sso-adminHeader" th:text="#{remoteauth.sso.adminHeader}">Administrator flag header</label>
+                        <input type="text" class="input" id="sso-adminHeader" maxlength="128" placeholder="X-Auth-Admin">
+                    </div>
+                    <div class="field">
+                        <label for="sso-adminValue" th:text="#{remoteauth.sso.adminValue}">Administrator flag value</label>
+                        <input type="text" class="input" id="sso-adminValue" maxlength="128" placeholder="true">
+                    </div>
+                    <div class="field">
+                        <label for="sso-secretHeaderName" th:text="#{remoteauth.sso.secretHeaderName}">Shared secret header</label>
+                        <input type="text" class="input" id="sso-secretHeaderName" maxlength="128" placeholder="X-Auth-Secret">
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="sso-secretHeaderValue" th:text="#{remoteauth.sso.secretHeaderValue}">Shared secret</label>
+                    <input type="password" class="input" id="sso-secretHeaderValue" maxlength="256"
+                           autocomplete="new-password">
+                    <div class="field-hint" th:text="#{remoteauth.sso.secretHint}">Leave blank to keep it</div>
+                    <span class="badge" id="sso-secret-state"></span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="grid-2">
+                <div class="field">
+                    <label for="sso-logoutRedirectUrl" th:text="#{remoteauth.sso.logoutRedirectUrl}">Post-logout redirect</label>
+                    <input type="text" class="input" id="sso-logoutRedirectUrl" maxlength="512"
+                           placeholder="https://portal.company.com">
+                    <div class="field-hint" th:text="#{remoteauth.sso.logoutRedirectHint}">Optional</div>
+                </div>
+                <div class="field">
+                    <label th:text="#{remoteauth.sso.trustedProxies}">Trusted proxies</label>
+                    <input type="text" class="input mono" id="sso-trustedProxies" readonly>
+                    <div class="field-hint" th:text="#{remoteauth.sso.trustedProxiesHint}">app.security.trusted-proxies</div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-ghost" id="sso-test-headers"
+                        th:text="#{remoteauth.sso.testHeaders}">Check headers</button>
+                <button type="button" class="btn btn-ghost" id="sso-test-validate"
+                        th:text="#{remoteauth.sso.testValidate}">Test validation</button>
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-head">
+        <div>
+            <h3 th:text="#{remoteauth.sources.title}">Password identity sources</h3>
+            <span class="hint" th:text="#{remoteauth.sources.hint}">Password relay</span>
+        </div>
         <button class="btn btn-primary" data-open-modal="ra-modal" onclick="openRaForm(null)">
             <svg class="ico"><use href="#plus-lg"/></svg>
             <span th:text="#{remoteauth.new}">New identity source</span>
         </button>
     </div>
-</div>
-
-<div class="card">
     <div class="card-body tight">
         <div class="tbl-wrap">
             <table class="tbl">
@@ -176,6 +350,140 @@
         var MSG_TESTING = /*[[#{common.testing}]]*/ 'Testing...';
         var MSG_TEST = /*[[#{common.test}]]*/ 'Test';
         var MSG_FILL_REQUIRED = /*[[#{remoteauth.test.fillRequired}]]*/ 'Fill required fields first';
+        var MSG_SSO_SAVED = /*[[#{remoteauth.sso.saved}]]*/ 'SSO settings saved';
+        var MSG_SSO_SECRET_ON = /*[[#{remoteauth.sso.secretConfigured}]]*/ 'Secret configured';
+        var MSG_SSO_SECRET_OFF = /*[[#{remoteauth.sso.secretNotConfigured}]]*/ 'No secret configured';
+
+        // ── 企业统一认证 ──────────────────────────────────────
+        var ssoForm = document.getElementById('sso-form');
+        var ssoTicketFields = document.getElementById('sso-ticket-fields');
+        var ssoHeaderFields = document.getElementById('sso-header-fields');
+
+        function ssoVal(id) {
+            var el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+        function ssoChecked(id) {
+            var el = document.getElementById(id);
+            return !!(el && el.checked);
+        }
+        function ssoSet(id, value) {
+            var el = document.getElementById(id);
+            if (el) el.value = value == null ? '' : value;
+        }
+        function ssoSetChecked(id, value) {
+            var el = document.getElementById(id);
+            if (el) el.checked = !!value;
+        }
+
+        function ssoModeToggle() {
+            var mode = ssoVal('sso-mode') || 'TICKET';
+            ssoTicketFields.hidden = mode !== 'TICKET';
+            ssoHeaderFields.hidden = mode !== 'HEADER';
+        }
+
+        function collectSsoForm() {
+            var timeout = parseInt(ssoVal('sso-timeoutMs'), 10);
+            return {
+                isEnabled: ssoChecked('sso-enabled'),
+                authMode: ssoVal('sso-mode') || 'TICKET',
+                adminUsers: ssoVal('sso-adminUsers'),
+                loginEntryUrl: ssoVal('sso-loginEntryUrl') || null,
+                logoutRedirectUrl: ssoVal('sso-logoutRedirectUrl') || null,
+                localLoginEnabled: ssoChecked('sso-localLogin'),
+                userHeader: ssoVal('sso-userHeader') || null,
+                adminHeader: ssoVal('sso-adminHeader') || null,
+                adminValue: ssoVal('sso-adminValue') || null,
+                secretHeaderName: ssoVal('sso-secretHeaderName') || null,
+                secretHeaderValue: ssoVal('sso-secretHeaderValue') || null,
+                validateUrl: ssoVal('sso-validateUrl') || null,
+                validateMethod: ssoVal('sso-validateMethod') || 'GET',
+                ticketParam: ssoVal('sso-ticketParam') || null,
+                successField: ssoVal('sso-successField') || null,
+                successValue: ssoVal('sso-successValue') || null,
+                userField: ssoVal('sso-userField') || null,
+                adminField: ssoVal('sso-adminField') || null,
+                timeoutMs: isNaN(timeout) ? null : timeout,
+                allowInsecureHttp: ssoChecked('sso-allowInsecureHttp')
+            };
+        }
+
+        function fillSsoForm(data) {
+            var c = (data && data.config) ? data.config : {};
+            ssoSetChecked('sso-enabled', c.enabled);
+            ssoSet('sso-mode', c.authMode || 'TICKET');
+            ssoSet('sso-adminUsers', c.adminUsers);
+            ssoSetChecked('sso-localLogin', c.localLoginEnabled);
+            ssoSet('sso-loginEntryUrl', c.loginEntryUrl);
+            ssoSet('sso-logoutRedirectUrl', c.logoutRedirectUrl);
+            ssoSet('sso-userHeader', c.userHeader);
+            ssoSet('sso-adminHeader', c.adminHeader);
+            ssoSet('sso-adminValue', c.adminValue);
+            ssoSet('sso-secretHeaderName', c.secretHeaderName);
+            ssoSet('sso-secretHeaderValue', '');
+            ssoSet('sso-validateUrl', c.validateUrl);
+            ssoSet('sso-validateMethod', c.validateMethod || 'GET');
+            ssoSet('sso-ticketParam', c.ticketParam);
+            ssoSet('sso-successField', c.successField);
+            ssoSet('sso-successValue', c.successValue);
+            ssoSet('sso-userField', c.userField);
+            ssoSet('sso-adminField', c.adminField);
+            ssoSet('sso-timeoutMs', c.timeoutMs);
+            ssoSetChecked('sso-allowInsecureHttp', c.allowInsecureHttp);
+            var proxies = (data && data.trustedProxies) ? data.trustedProxies : [];
+            ssoSet('sso-trustedProxies', proxies.join(', ') || '—');
+            var state = document.getElementById('sso-secret-state');
+            state.textContent = c.secretConfigured ? MSG_SSO_SECRET_ON : MSG_SSO_SECRET_OFF;
+            state.className = 'badge ' + (c.secretConfigured ? 'badge-ok' : 'badge-warn');
+            ssoModeToggle();
+        }
+
+        if (ssoForm) {
+            UI.api.get('/api/sso/config').then(fillSsoForm).catch(function (err) {
+                UI.toast(String(err.message || err), 'danger');
+            });
+
+            document.getElementById('sso-mode').addEventListener('change', ssoModeToggle);
+
+            ssoForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                UI.api.put('/api/sso/config', collectSsoForm()).then(function () {
+                    UI.toast(MSG_SSO_SAVED, 'ok');
+                    setTimeout(function () { location.reload(); }, 500);
+                }).catch(function (err) {
+                    UI.toast(String(err.message || err), 'danger');
+                });
+            });
+
+            document.getElementById('sso-test-validate').addEventListener('click', function () {
+                var ticket = ssoVal('sso-testTicket');
+                UI.api.post('/api/sso/test/validate', {
+                    config: collectSsoForm(),
+                    ticket: ticket || null
+                }).then(function (r) {
+                    var msg = r.message || (r.success ? 'OK' : 'FAIL');
+                    if (r.username) msg += ' · ' + r.username;
+                    if (r.role) msg += ' · ' + r.role;
+                    UI.toast(msg, r.success ? 'ok' : 'danger');
+                }).catch(function (err) {
+                    UI.toast(String(err.message || err), 'danger');
+                });
+            });
+
+            document.getElementById('sso-test-headers').addEventListener('click', function () {
+                UI.api.post('/api/sso/test/headers', collectSsoForm()).then(function (r) {
+                    var parts = [];
+                    if (r.remoteAddr) parts.push(r.remoteAddr);
+                    parts.push(r.trusted ? 'trusted' : 'untrusted');
+                    if (r.username) parts.push(r.username);
+                    if (r.resolvedRole) parts.push(r.resolvedRole);
+                    var msg = parts.join(' · ') + (r.message ? ' — ' + r.message : '');
+                    UI.toast(msg, r.trusted && r.secretMatches ? 'ok' : 'warn');
+                }).catch(function (err) {
+                    UI.toast(String(err.message || err), 'danger');
+                });
+            });
+        }
 
         // 高级设置折叠/展开
         var advPanel = document.getElementById('ra-advanced');

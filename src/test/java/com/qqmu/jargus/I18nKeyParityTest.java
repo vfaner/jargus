@@ -43,6 +43,32 @@ class I18nKeyParityTest {
         assertEquals("最新版本", zh.getProperty("settings.latestVersion"));
     }
 
+    @Test
+    void ssoAndLoginKeysExist() throws Exception {
+        Properties en = load("i18n/messages.properties");
+        Properties zh = load("i18n/messages_zh_CN.properties");
+
+        for (String key : new String[]{
+                "login.sso.button",
+                "login.sso.headerNotice",
+                "login.sso.error.ticketMissing",
+                "login.sso.error.ticketError",
+                "login.sso.error.tooManyAttempts",
+                "login.sso.error.disabled",
+                "login.sso.error.header",
+                "remoteauth.sso.title",
+                "remoteauth.sso.enabled",
+                "remoteauth.sso.localLogin",
+                "remoteauth.sso.adminUsers",
+                "remoteauth.sso.testValidate",
+                "remoteauth.sso.testHeaders"}) {
+            assertTrue(en.containsKey(key), "英文缺少 " + key);
+            assertTrue(zh.containsKey(key), "中文缺少 " + key);
+        }
+        assertEquals("Unified auth", en.getProperty("nav.remoteAuth"));
+        assertEquals("统一认证", zh.getProperty("nav.remoteAuth"));
+    }
+
     private static Properties load(String path) throws Exception {
         Properties properties = new Properties();
         try (InputStream in = I18nKeyParityTest.class.getClassLoader().getResourceAsStream(path)) {

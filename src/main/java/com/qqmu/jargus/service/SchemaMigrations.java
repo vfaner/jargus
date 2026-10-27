@@ -71,6 +71,7 @@ public class SchemaMigrations {
         ensureGateSettingTable(jdbc, meta, f);
         ensureMailTables(jdbc, meta, f);
         ensureArtifactDismissalTable(jdbc, meta, f);
+        ensureSsoConfigTable(jdbc, meta, f);
         // 历史扫描问题的修复建议回填
         backfillSuggestions(jdbc, f);
     }
@@ -214,6 +215,34 @@ public class SchemaMigrations {
                 DialectDdl.plainBigintPk(f),
                 "artifact_key " + DialectDdl.varchar(f, 160) + " NOT NULL",
                 "dismissed_at " + DialectDdl.tsType(f) + " NOT NULL"
+        ));
+    }
+
+    /** 企业统一认证配置（固定单行 id=1；无行 = 未配置） */
+    private void ensureSsoConfigTable(JdbcTemplate jdbc, SchemaMetadata meta, Family f) {
+        createIfAbsent(jdbc, meta, f, "sso_config", List.of(
+                DialectDdl.plainBigintPk(f),
+                "is_enabled " + DialectDdl.boolDefault(f, false),
+                "auth_mode " + DialectDdl.varchar(f, 16) + " DEFAULT 'TICKET' NOT NULL",
+                "admin_users " + DialectDdl.varchar(f, 1024),
+                "login_entry_url " + DialectDdl.varchar(f, 512),
+                "logout_redirect_url " + DialectDdl.varchar(f, 512),
+                "local_login_enabled " + DialectDdl.boolDefault(f, true),
+                "user_header " + DialectDdl.varchar(f, 128),
+                "admin_header " + DialectDdl.varchar(f, 128),
+                "admin_value " + DialectDdl.varchar(f, 128),
+                "secret_header_name " + DialectDdl.varchar(f, 128),
+                "secret_header_value " + DialectDdl.varchar(f, 512),
+                "validate_url " + DialectDdl.varchar(f, 512),
+                "validate_method " + DialectDdl.varchar(f, 8) + " DEFAULT 'GET'",
+                "ticket_param " + DialectDdl.varchar(f, 64) + " DEFAULT 'ticket'",
+                "success_field " + DialectDdl.varchar(f, 128),
+                "success_value " + DialectDdl.varchar(f, 128),
+                "user_field " + DialectDdl.varchar(f, 128),
+                "admin_field " + DialectDdl.varchar(f, 128),
+                "timeout_ms " + DialectDdl.intType(f) + " DEFAULT 5000",
+                "allow_insecure_http " + DialectDdl.boolDefault(f, false),
+                DialectDdl.timestampNow("updated_at", f)
         ));
     }
 

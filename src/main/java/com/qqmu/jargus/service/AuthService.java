@@ -26,12 +26,16 @@ public class AuthService {
     private final SysUserMapper sysUserMapper;
     private final JwtUtil jwtUtil;
     private final RemoteAuthConfigService remoteAuthConfigService;
+    private final SsoConfigService ssoConfigService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     /**
      * 本地登录
      */
     public LoginResult loginLocal(String username, String password) {
+        if (!ssoConfigService.isLocalLoginEnabled()) {
+            throw new RuntimeException("本地登录已关闭，请使用企业统一认证");
+        }
         SysUser user = sysUserMapper.selectOne(
                 new QueryWrapper<SysUser>().eq("username", username)
         );
@@ -39,7 +43,9 @@ public class AuthService {
             throw new RuntimeException("用户名或密码错误");
         }
         if (!"LOCAL".equalsIgnoreCase(user.getSource())) {
-            throw new RuntimeException("该用户需通过远端登录");
+            throw new RuntimeException("SSO".equalsIgnoreCase(user.getSource())
+                    ? "该用户需通过企业统一认证登录"
+                    : "该用户需通过远端登录");
         }
         if (!Boolean.TRUE.equals(user.getIsEnabled())) {
             throw new RuntimeException("用户已被禁用");

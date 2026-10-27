@@ -2,6 +2,7 @@ package com.qqmu.jargus.controller;
 
 import com.qqmu.jargus.dto.QualityGateResult;
 import com.qqmu.jargus.entity.ScanTask;
+import com.qqmu.jargus.entity.SsoConfig;
 import com.qqmu.jargus.env.ProjectInfo;
 import com.qqmu.jargus.security.PublicAccess;
 import com.qqmu.jargus.security.UserContext;
@@ -19,11 +20,15 @@ import com.qqmu.jargus.service.QualityGateService;
 import com.qqmu.jargus.service.RemoteAuthConfigService;
 import com.qqmu.jargus.service.ReviewRuleService;
 import com.qqmu.jargus.service.ScanTaskService;
+import com.qqmu.jargus.service.SsoConfigService;
+import com.qqmu.jargus.service.SsoLoginPageResolver;
 import com.qqmu.jargus.service.version.VersionService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -69,6 +74,8 @@ public class PageController {
     private final MailSenderConfigService mailSenderConfigService;
     private final MailRecipientService mailRecipientService;
     private final VersionService versionService;
+    private final SsoConfigService ssoConfigService;
+    private final MessageSource messageSource;
 
     @Value("${app.work-dir:./work}")
     private String workDir;
@@ -100,7 +107,36 @@ public class PageController {
     }
 
     @GetMapping("/login")
-    public String login() {
+    public String login(Model model, @RequestParam Map<String, String> params) {
+        SsoConfig ssoConfig = ssoConfigService.getRaw();
+        boolean localLoginEnabled = SsoConfigService.isLocalLoginEnabled(ssoConfig);
+        boolean hasRemoteConfigs;
+        try {
+            hasRemoteConfigs = !remoteAuthConfigService.listEnabled().isEmpty();
+        } catch (Exception e) {
+            hasRemoteConfigs = false;
+        }
+        SsoLoginPageResolver.LoginPageState state = SsoLoginPageResolver.resolve(
+                ssoConfig, localLoginEnabled, hasRemoteConfigs, params);
+        if (state.redirectToSso()) {
+            return "redirect:" + state.ssoEntryUrl();
+        }
+        model.addAttribute("ssoEnabled", state.ssoEnabled());
+        model.addAttribute("ssoMode", state.ssoMode());
+        model.addAttribute("ssoEntryUrl", state.ssoEntryUrl());
+        model.addAttribute("showSsoButton", state.showSsoButton());
+        model.addAttribute("showLocalForm", state.showLocalForm());
+        model.addAttribute("showRemoteTab", state.showRemoteTab());
+        model.addAttribute("showHeaderNotice", state.showHeaderNotice());
+        String errorText = null;
+        if (state.ssoErrorKey() != null) {
+            try {
+                errorText = messageSource.getMessage(state.ssoErrorKey(), null, LocaleContextHolder.getLocale());
+            } catch (Exception ignored) {
+                errorText = null;
+            }
+        }
+        model.addAttribute("ssoErrorText", errorText);
         return "login";
     }
 
