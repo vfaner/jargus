@@ -194,6 +194,18 @@ code, .mono { font-family: var(--mono); font-size: .88em; }
   color: var(--brand);
   background: color-mix(in srgb, var(--brand) 10%, transparent);
 }
+/* 更新提示圆点：必须在 .nav-settings span{display:none} 之后覆盖 */
+.nav-settings { position: relative; }
+.nav-settings .nav-update-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  position: absolute; top: -3px; right: -3px;
+  min-width: 14px; height: 14px; padding: 0 3px; border-radius: 999px;
+  background: var(--danger); color: #fff; font-size: 9px; font-weight: 700;
+  line-height: 1; box-shadow: 0 0 0 2px var(--bg);
+}
+.nav-settings .nav-update-dot[hidden] { display: none; }
+/* 导航圆点/「查看发布」跳到版本卡时留出吸顶导航高度 */
+#version-info { scroll-margin-top: calc(var(--nav-h, 64px) + 12px); }
 
 /* ─── 导航下拉分组 ─────────────────────────────────────── */
 .nav-group { position: relative; display: flex; align-items: stretch; }

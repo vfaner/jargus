@@ -145,6 +145,13 @@
             <a th:if="${isAdmin}" class="nav-settings" th:href="@{/settings}"
                th:classappend="${activeNav == 'settings'} ? 'active' : ''" th:title="#{nav.settings}">
                 <svg class="ico"><use href="#gear"/></svg><span th:text="#{nav.settings}">System info</span>
+                <span class="nav-update-dot" id="nav-update-badge"
+                      th:if="${updateCheckEnabled}"
+                      th:data-url="@{/api/version/check}"
+                      th:data-label="#{settings.updateAvailable}"
+                      th:data-label-artifact="#{settings.artifactUpdatedShort}"
+                      th:data-refresh="${activeNav == 'settings'}"
+                      hidden>!</span>
             </a>
         </nav>
 

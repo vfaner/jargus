@@ -29,6 +29,10 @@ public class GlobalModelAdvice {
     @Value("${app.asset-version:}")
     private String assetVersion;
 
+    /** 关闭后 layout 不渲染导航更新圆点，settings 显示「版本检查已关闭」 */
+    @Value("${app.update-check.enabled:true}")
+    private boolean updateCheckEnabled;
+
     @ModelAttribute("appVersion")
     public String appVersion() {
         return (appVersion != null && !appVersion.isBlank()) ? "v" + appVersion.trim() : null;
@@ -49,6 +53,11 @@ public class GlobalModelAdvice {
     @ModelAttribute("authEnabled")
     public boolean authEnabled() {
         return authEnabled;
+    }
+
+    @ModelAttribute("updateCheckEnabled")
+    public boolean updateCheckEnabled() {
+        return updateCheckEnabled;
     }
 
     @ModelAttribute("currentUsername")

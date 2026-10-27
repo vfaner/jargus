@@ -16,6 +16,8 @@ public class VersionInfo {
         UP_TO_DATE,
         /** 远端存在更新版本。 */
         UPDATE_AVAILABLE,
+        /** 版本号相同，但远端安装包被重新上传，与当前运行 jar 不同。 */
+        ARTIFACT_UPDATED,
         /** 启动后首次检查尚未完成；页面渲染不等它。 */
         CHECKING,
         /** 远端不可达或响应无法解析（离线内网、限流、仓库地址配置错）。 */
@@ -34,6 +36,10 @@ public class VersionInfo {
     private final String releaseUrl;
     /** 最新发布日期 yyyy-MM-dd；可能为 null。 */
     private final String latestPublishedDate;
+    /** 同版本号安装包被重新上传的日期 yyyy-MM-dd；仅 ARTIFACT_UPDATED 时可能有值。 */
+    private final String latestArtifactDate;
+    /** 主栏最新发布来自哪个平台（GitHub 或 Gitee 兜底）；未知时为 null。 */
+    private final ReleaseFeed.Source latestSource;
     /** Gitee 镜像最新发布版本（无 v 前缀）；未配置/不可达时为 null，仅展示不参与状态判定。 */
     private final String giteeLatestVersion;
     /** Gitee 最新发布页浏览器地址；可能为 null。 */
@@ -43,4 +49,9 @@ public class VersionInfo {
     private final State state;
     /** 当前版本发布说明的安全 HTML；取不到时 null。 */
     private final String currentNotesHtml;
+
+    /** 模板用：GitHub / Gitee；来源未知时为 null。 */
+    public String getLatestSourceLabel() {
+        return latestSource == null ? null : latestSource.displayName();
+    }
 }

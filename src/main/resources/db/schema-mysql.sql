@@ -468,4 +468,13 @@ INSERT INTO review_rule (rule_code, rule_name, rule_category, description, defau
 ('UNUSED_IMPORT', '未使用的import', '冗余', '应删除未使用的import语句', 'MINOR', 1, 1, 9),
 ('NULL_CHECK', '空指针风险', '缺陷', '可能存在空指针异常风险', 'CRITICAL', 1, 1, 10);
 
+-- ============================================================
+-- 表 19: update_artifact_dismissal (同版本号安装包重发提示的忽略记录，固定单行 id=1)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS update_artifact_dismissal (
+    id BIGINT PRIMARY KEY COMMENT '固定为 1',
+    artifact_key VARCHAR(160) NOT NULL COMMENT 'sha256:<hex> 或 size:<bytes>',
+    dismissed_at DATETIME NOT NULL COMMENT '忽略时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='安装包重发提示忽略记录';
+
 SET FOREIGN_KEY_CHECKS = 1;

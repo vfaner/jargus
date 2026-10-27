@@ -8,6 +8,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,15 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 读 Gitee REST API（v5）发布信息的实现，与 {@link GithubReleaseFeed} 同纪律：
- * 3 秒超时、不跟随重定向、地址配错只降级不挡启动。
+ * 可配置超时、跟随正常重定向、地址配错只降级不挡启动。
  *
- * <p>用于系统信息页展示「Gitee 最新版本」；Gitee 不可达不影响 GitHub 主比对结果。
+ * <p>既作为「Gitee 最新版本」栏的数据源，也是 GitHub 不可达时的兜底发布源；
+ * Gitee 不可达不影响 GitHub 主比对结果。
  */
 @Component
 @Slf4j
 public class GiteeReleaseFeed implements ReleaseFeed {
-
-    private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
     /** https://gitee.com/owner/repo(.git)(/) 或 http 变体。 */
     private static final Pattern HTTPS_URL =
@@ -39,12 +40,15 @@ public class GiteeReleaseFeed implements ReleaseFeed {
     private static final Pattern SSH_URL =
             Pattern.compile("^git@gitee\\.com:([^/]+)/([^/#?:]+?)(?:\\.git)?/?$");
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private final String apiBase;
     private final String repoUrl;
+    private final Duration timeout;
     private final HttpClient http;
-    private final ObjectMapper mapper = new ObjectMapper();
 
-    public GiteeReleaseFeed(@Value("${app.gitee-url:}") String giteeUrl) {
+    public GiteeReleaseFeed(@Value("${app.gitee-url:}") String giteeUrl,
+                            @Value("${app.update-check.timeout-ms:5000}") long timeoutMs) {
         String parsedApi = null;
         String parsedRepo = null;
         try {
@@ -57,9 +61,10 @@ public class GiteeReleaseFeed implements ReleaseFeed {
         }
         this.apiBase = parsedApi;
         this.repoUrl = parsedRepo;
+        this.timeout = Duration.ofMillis(Math.max(500, timeoutMs));
         this.http = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
-                .followRedirects(HttpClient.Redirect.NEVER)
+                .connectTimeout(this.timeout)
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
     }
 
@@ -100,34 +105,64 @@ public class GiteeReleaseFeed implements ReleaseFeed {
             throw new IllegalStateException("app.gitee-url 推导不出 Gitee API 根地址");
         }
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(TIMEOUT)
+                .timeout(timeout)
                 .header("Accept", "application/json")
                 .header("User-Agent", "jargus-update-check")
                 .GET()
                 .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            throw new IllegalStateException("Gitee API 返回 " + response.statusCode());
+            throw ReleaseFeed.apiFailure(Source.GITEE, response.statusCode());
         }
-        JsonNode json = mapper.readTree(response.body());
-        String tag = json.path("tag_name").asText(null);
+        return parse(response.body(), repoUrl);
+    }
+
+    /** 解析 release JSON（包级可见，单测直接喂字符串，不碰网络）。 */
+    static Release parse(String body, String repoUrl) throws Exception {
+        JsonNode json = MAPPER.readTree(body);
+        String tag = text(json, "tag_name");
         if (tag == null) {
             throw new IllegalStateException("Gitee API 响应缺少 tag_name");
         }
         // v5 发布对象不保证带 html_url，缺省时按仓库地址拼发布页
-        String htmlUrl = json.path("html_url").asText(null);
-        if (htmlUrl == null || htmlUrl.isBlank()) {
-            htmlUrl = repoUrl + "/releases/" + URLEncoder.encode(tag, StandardCharsets.UTF_8);
+        String htmlUrl = text(json, "html_url");
+        if (htmlUrl == null) {
+            htmlUrl = (repoUrl == null ? "" : repoUrl) + "/releases/tag/"
+                    + URLEncoder.encode(tag, StandardCharsets.UTF_8).replace("+", "%20");
         }
-        String published = json.path("created_at").asText(null);
-        Instant publishedAt = null;
-        if (published != null && !published.isBlank()) {
-            try {
-                publishedAt = Instant.parse(published);
-            } catch (Exception ignored) {
-                // 时间格式意外时只丢日期，不丢版本比对
+        Instant publishedAt = ReleaseFeed.parseInstant(text(json, "created_at"));
+
+        List<Asset> assets = new ArrayList<>();
+        JsonNode arr = json.path("assets");
+        if (arr.isArray()) {
+            for (JsonNode item : arr) {
+                String name = text(item, "name");
+                String url = text(item, "browser_download_url");
+                if (url == null) {
+                    url = text(item, "download_url");
+                }
+                if (name == null || url == null) {
+                    continue;
+                }
+                Long size = item.path("size").isNumber() ? item.path("size").asLong() : null;
+                String uploaded = text(item, "updated_at");
+                if (uploaded == null) {
+                    uploaded = text(item, "created_at");
+                }
+                assets.add(new Asset(name, url, size, null,
+                        ReleaseFeed.parseInstant(uploaded)));
             }
         }
-        return new Release(tag, htmlUrl, publishedAt, json.path("body").asText(""));
+        return new Release(tag, htmlUrl, publishedAt, json.path("body").asText(""),
+                assets, Source.GITEE);
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        String text = value.asText();
+        return text == null || text.isBlank() ? null : text;
     }
 }

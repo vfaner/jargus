@@ -484,6 +484,87 @@
     });
   }
 
+  /* ─── 检查更新：导航圆点 + 安装包重发提示 ─────────────── */
+
+  var NAV_UPDATE_CACHE_KEY = 'jargus-nav-update-check';
+
+  function readNavUpdateCache() {
+    try {
+      var raw = sessionStorage.getItem(NAV_UPDATE_CACHE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeNavUpdateCache(payload) {
+    try {
+      sessionStorage.setItem(NAV_UPDATE_CACHE_KEY, JSON.stringify({
+        updateAvailable: !!payload.updateAvailable,
+        artifactUpdated: !!payload.artifactUpdated,
+        latestVersion: payload.latestVersion || ''
+      }));
+    } catch (e) { /* 隐私模式：本次仍渲染 */ }
+  }
+
+  /** 圆点只放「!」，完整说明放在 title/aria-label，避免撑破 36px 齿轮按钮 */
+  function showNavUpdateBadge(badge, payload) {
+    if (!badge || !payload) return;
+    if (!payload.updateAvailable && !payload.artifactUpdated) {
+      badge.hidden = true;
+      return;
+    }
+    var label = payload.artifactUpdated
+      ? (badge.dataset.labelArtifact || badge.dataset.label)
+      : badge.dataset.label;
+    if (!label) label = '!';
+    if (payload.latestVersion) label += ' v' + payload.latestVersion;
+    badge.textContent = '!';
+    badge.title = label;
+    badge.setAttribute('aria-label', label);
+    badge.hidden = false;
+
+    var link = badge.closest('a');
+    if (link && link.getAttribute('href')) {
+      link.setAttribute('href', link.getAttribute('href').split('#')[0] + '#version-info');
+    }
+  }
+
+  /** 会话内复用缓存；设置页（data-refresh=true）每次强制刷新一次 */
+  function bindNavUpdateBadge() {
+    var badge = document.getElementById('nav-update-badge');
+    if (!badge) return;
+    var cached = readNavUpdateCache();
+    if (cached) showNavUpdateBadge(badge, cached);
+    if (cached && badge.dataset.refresh !== 'true') return;
+
+    api.get(badge.dataset.url).then(function (payload) {
+      if (!payload) return;
+      writeNavUpdateCache(payload);
+      showNavUpdateBadge(badge, payload);
+    }).catch(function () { /* 离线/限流：保留缓存状态，不打扰用户 */ });
+  }
+
+  function bindArtifactDismiss() {
+    var btn = document.getElementById('artifact-dismiss-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      api.post(btn.dataset.url).then(function (res) {
+        if (res && res.dismissed) {
+          try { sessionStorage.removeItem(NAV_UPDATE_CACHE_KEY); } catch (e) { /* ignore */ }
+          location.reload();
+          return;
+        }
+        btn.disabled = false;
+      }).catch(function () {
+        btn.disabled = false;
+        toast(t('settings.unknown'), 'error');
+      });
+    });
+  }
+
   /* ─── 初始化 ────────────────────────────────────────────── */
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -495,6 +576,8 @@
     document.querySelectorAll('[data-role="dismiss-default-pw"]').forEach(bindDefaultPwDismiss);
     bindModals();
     bindDonate();
+    bindNavUpdateBadge();
+    bindArtifactDismiss();
 
     // 关闭提示条
     document.querySelectorAll('[data-dismiss]').forEach(function (btn) {

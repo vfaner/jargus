@@ -70,6 +70,7 @@ public class SchemaMigrations {
         ensureUserTables(jdbc, meta, f);
         ensureGateSettingTable(jdbc, meta, f);
         ensureMailTables(jdbc, meta, f);
+        ensureArtifactDismissalTable(jdbc, meta, f);
         // 历史扫描问题的修复建议回填
         backfillSuggestions(jdbc, f);
     }
@@ -204,6 +205,15 @@ public class SchemaMigrations {
                 "email " + DialectDdl.varchar(f, 256) + " NOT NULL UNIQUE",
                 DialectDdl.timestampNow("created_at", f),
                 DialectDdl.timestampNow("updated_at", f)
+        ));
+    }
+
+    /** 同版本号安装包重发提示的忽略记录（固定单行 id=1；无行 = 未忽略） */
+    private void ensureArtifactDismissalTable(JdbcTemplate jdbc, SchemaMetadata meta, Family f) {
+        createIfAbsent(jdbc, meta, f, "update_artifact_dismissal", List.of(
+                DialectDdl.plainBigintPk(f),
+                "artifact_key " + DialectDdl.varchar(f, 160) + " NOT NULL",
+                "dismissed_at " + DialectDdl.tsType(f) + " NOT NULL"
         ));
     }
 

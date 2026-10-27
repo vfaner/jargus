@@ -139,7 +139,7 @@
 </div>
 
 <!-- 版本信息：徽标 + 当前/最新对照 + 内置发布说明（置底） -->
-<div class="card">
+<div class="card" id="version-info">
     <div class="card-head">
         <h3 th:text="#{settings.versionInfo}">Version information</h3>
     </div>
@@ -149,12 +149,28 @@
                 <span th:text="#{settings.upToDate}">Up to date</span></span>
             <th:block th:if="${versionInfo.state.name() == 'UPDATE_AVAILABLE'}">
                 <span class="badge badge-warn">↑ <span th:text="#{settings.updateAvailable}">New version</span></span>
-                <a class="repo-link" th:href="${versionInfo.releaseUrl}" target="_blank" rel="noopener noreferrer">
+                <a class="repo-link" th:if="${versionInfo.releaseUrl}" th:href="${versionInfo.releaseUrl}"
+                   target="_blank" rel="noopener noreferrer">
                     <span th:text="#{settings.viewRelease}">View release</span>
                 </a>
                 <button id="btn-one-click-update" type="button" class="btn btn-primary btn-sm">
                     <span th:text="#{settings.updateNow}">Update now</span>
                 </button>
+            </th:block>
+            <!--/* 版本号相同但远端安装包被重发：没有新版本可升，只提示 + 忽略 */-->
+            <th:block th:if="${versionInfo.state.name() == 'ARTIFACT_UPDATED'}">
+                <span class="badge badge-warn">↻
+                    <span th:text="#{settings.artifactUpdated}">Package re-published</span></span>
+                <a class="repo-link" th:if="${versionInfo.releaseUrl}" th:href="${versionInfo.releaseUrl}"
+                   target="_blank" rel="noopener noreferrer">
+                    <span th:text="#{settings.viewRelease}">View release</span>
+                </a>
+                <span class="muted" th:if="${versionInfo.latestArtifactDate}"
+                      th:text="${versionInfo.latestArtifactDate}">2026-09-21</span>
+                <button id="artifact-dismiss-btn" type="button" class="btn btn-ghost btn-sm"
+                        th:data-url="@{/api/version/artifact/dismiss}"
+                        th:title="#{settings.artifactDismissHelp}"
+                        th:text="#{settings.artifactDismiss}">Ignore this notice</button>
             </th:block>
             <span id="update-progress" class="badge" hidden>
                 <span id="update-progress-text">…</span>
@@ -177,7 +193,12 @@
                 </dd>
             </div>
             <div class="dl-row">
-                <dt th:text="#{settings.latestVersion}">Latest on GitHub</dt>
+                <dt>
+                    <span th:text="#{settings.latestVersion}">Latest version</span>
+                    <!--/* GitHub 不可达时主栏由 Gitee 兜底，标注实际来源 */-->
+                    <span class="muted" th:if="${versionInfo.latestSourceLabel}"
+                          th:text="'(' + ${versionInfo.latestSourceLabel} + ')'">(GitHub)</span>
+                </dt>
                 <dd>
                     <th:block th:if="${versionInfo.latestVersion}">
                         <span class="chip mono" th:text="'v' + ${versionInfo.latestVersion}">v1.0.0</span>
@@ -191,9 +212,12 @@
                 <dt th:text="#{settings.latestVersionGitee}">Latest on Gitee</dt>
                 <dd>
                     <th:block th:if="${versionInfo.giteeLatestVersion}">
-                        <a th:href="${versionInfo.giteeReleaseUrl}" target="_blank" rel="noopener noreferrer">
+                        <a th:if="${versionInfo.giteeReleaseUrl}" th:href="${versionInfo.giteeReleaseUrl}"
+                           target="_blank" rel="noopener noreferrer">
                             <span class="chip mono" th:text="'v' + ${versionInfo.giteeLatestVersion}">v1.0.0</span>
                         </a>
+                        <span class="chip mono" th:unless="${versionInfo.giteeReleaseUrl}"
+                              th:text="'v' + ${versionInfo.giteeLatestVersion}">v1.0.0</span>
                         <span class="muted" th:if="${versionInfo.giteeLatestPublishedDate}"
                               th:text="${versionInfo.giteeLatestPublishedDate}">2026-09-21</span>
                     </th:block>

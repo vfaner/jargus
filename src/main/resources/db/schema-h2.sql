@@ -464,3 +464,12 @@ CREATE TABLE IF NOT EXISTS mail_recipient (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================================
+-- 表 19: update_artifact_dismissal (同版本号安装包重发提示的忽略记录，固定单行 id=1)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS update_artifact_dismissal (
+    id BIGINT PRIMARY KEY,
+    artifact_key VARCHAR(160) NOT NULL,
+    dismissed_at TIMESTAMP NOT NULL
+);

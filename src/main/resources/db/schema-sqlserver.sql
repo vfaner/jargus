@@ -466,3 +466,12 @@ INSERT INTO review_rule (rule_code, rule_name, rule_category, description, defau
 ('SYSTEM_OUT', N'System.out输出', N'风格', N'生产代码应使用日志框架而非System.out', 'MAJOR', 1, 1, 8),
 ('UNUSED_IMPORT', N'未使用的import', N'冗余', N'应删除未使用的import语句', 'MINOR', 1, 1, 9),
 ('NULL_CHECK', N'空指针风险', N'缺陷', N'可能存在空指针异常风险', 'CRITICAL', 1, 1, 10);
+
+-- ============================================================
+-- 表 19: update_artifact_dismissal (同版本号安装包重发提示的忽略记录，固定单行 id=1)
+-- ============================================================
+CREATE TABLE update_artifact_dismissal (
+    id BIGINT PRIMARY KEY,
+    artifact_key NVARCHAR(160) NOT NULL,
+    dismissed_at DATETIME2 NOT NULL
+);

@@ -59,7 +59,7 @@ app:
   # 版本号（页脚展示）
   version: 2.0.7
   # 静态资源版本号（css/js 缓存刷新，随静态资源改动递增）
-  asset-version: 2.0.10
+  asset-version: 2.0.11
   # 仓库地址（导航 GitHub 图标、打赏弹窗、系统信息页与版本比对）
   github-url: https://github.com/vfaner/jargus
   # Gitee 镜像地址（系统信息页展示）
@@ -71,9 +71,13 @@ app:
     qq: 817094/2912167928
     wechat: qqmu66
     qq-group: 426669837
-  # 版本比对（拉 GitHub releases）；纯离线内网可关闭
+  # 版本比对（GitHub 为主、Gitee 兜底）；纯离线内网可关闭
   update-check:
     enabled: true
+    # GitHub/Gitee API 与安装包 HEAD 探测的超时（毫秒）
+    timeout-ms: 5000
+    # 同版本号安装包重发识别：比对远端附件 SHA-256/大小与当前运行 jar
+    match-artifact: true
   # 一键更新（下载最新 release JAR、替换并自动重启）；纯离线内网可关闭
   update:
     enabled: true

@@ -8,6 +8,9 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,8 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 用 JDK 自带 HTTP 客户端读 GitHub REST API 的发布信息的实现，
- * 超时/不跟随重定向的纪律与 AiChatClient 一致。
+ * 用 JDK 自带 HTTP 客户端读 GitHub REST API 的发布信息的实现。
  *
  * <p>API 根地址由仓库地址（app.github-url）推导，改仓库不需要第二个配置；
  * 非 github.com 主机直接拒绝，不猜其他厂商的 API 形态。
@@ -29,8 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class GithubReleaseFeed implements ReleaseFeed {
-
-    private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
     /** https://github.com/owner/repo(.git)(/) 或 http 变体。 */
     private static final Pattern HTTPS_URL =
@@ -40,11 +40,17 @@ public class GithubReleaseFeed implements ReleaseFeed {
     private static final Pattern SSH_URL =
             Pattern.compile("^git@github\\.com:([^/]+)/([^/#?:]+?)(?:\\.git)?/?$");
 
-    private final String apiBase;
-    private final HttpClient http;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private static final Pattern SHA256_DIGEST =
+            Pattern.compile("^sha256:([0-9a-fA-F]{64})$");
 
-    public GithubReleaseFeed(@Value("${app.github-url:}") String githubUrl) {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private final String apiBase;
+    private final Duration timeout;
+    private final HttpClient http;
+
+    public GithubReleaseFeed(@Value("${app.github-url:}") String githubUrl,
+                             @Value("${app.update-check.timeout-ms:5000}") long timeoutMs) {
         String parsed;
         try {
             parsed = toApiBase(githubUrl);
@@ -54,9 +60,10 @@ public class GithubReleaseFeed implements ReleaseFeed {
             parsed = null;
         }
         this.apiBase = parsed;
+        this.timeout = Duration.ofMillis(Math.max(500, timeoutMs));
         this.http = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
-                .followRedirects(HttpClient.Redirect.NEVER)
+                .connectTimeout(this.timeout)
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
     }
 
@@ -96,27 +103,66 @@ public class GithubReleaseFeed implements ReleaseFeed {
             throw new IllegalStateException("app.github-url 推导不出 GitHub API 根地址");
         }
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(TIMEOUT)
+                .timeout(timeout)
                 .header("Accept", "application/vnd.github+json")
                 .header("User-Agent", "jargus-update-check")
                 .GET()
                 .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            throw new IllegalStateException("GitHub API 返回 " + response.statusCode());
+            throw ReleaseFeed.apiFailure(Source.GITHUB, response.statusCode());
         }
-        JsonNode json = mapper.readTree(response.body());
-        String tag = json.path("tag_name").asText(null);
-        String htmlUrl = json.path("html_url").asText(null);
-        String published = json.path("published_at").asText(null);
-        String body = json.path("body").asText("");
+        return parse(response.body());
+    }
+
+    /** 解析 release JSON（包级可见，单测直接喂字符串，不碰网络）。 */
+    static Release parse(String body) throws Exception {
+        JsonNode json = MAPPER.readTree(body);
+        String tag = text(json, "tag_name");
+        String htmlUrl = text(json, "html_url");
         if (tag == null || htmlUrl == null) {
             throw new IllegalStateException("GitHub API 响应缺少 tag_name/html_url");
         }
-        Instant publishedAt = null;
-        if (published != null && !published.isBlank()) {
-            publishedAt = Instant.parse(published);
+        Instant publishedAt = ReleaseFeed.parseInstant(text(json, "published_at"));
+        String notes = json.path("body").asText("");
+
+        List<Asset> assets = new ArrayList<>();
+        JsonNode arr = json.path("assets");
+        if (arr.isArray()) {
+            for (JsonNode item : arr) {
+                String name = text(item, "name");
+                String url = text(item, "browser_download_url");
+                if (name == null || url == null) {
+                    continue;
+                }
+                Long size = item.path("size").isNumber() ? item.path("size").asLong() : null;
+                String sha256 = normalizeSha256(text(item, "digest"));
+                String uploaded = text(item, "updated_at");
+                if (uploaded == null) {
+                    uploaded = text(item, "created_at");
+                }
+                assets.add(new Asset(name, url, size, sha256,
+                        ReleaseFeed.parseInstant(uploaded)));
+            }
         }
-        return new Release(tag, htmlUrl, publishedAt, body);
+        return new Release(tag, htmlUrl, publishedAt, notes, assets, Source.GITHUB);
+    }
+
+    /** GitHub digest 形如 sha256:&lt;64 hex&gt;；只接受 sha256，统一小写。 */
+    static String normalizeSha256(String digest) {
+        if (digest == null) {
+            return null;
+        }
+        Matcher m = SHA256_DIGEST.matcher(digest.trim());
+        return m.matches() ? m.group(1).toLowerCase(Locale.ROOT) : null;
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        String text = value.asText();
+        return text == null || text.isBlank() ? null : text;
     }
 }
